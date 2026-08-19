@@ -1125,9 +1125,11 @@ const fromContent = <T extends object>(item: PublicContent<T>) => ({ ...item.dat
 export async function hydrateStorefront() {
   const content = async <T extends object>(type: string) => (await api<{ items: PublicContent<T>[] }>(`/content/${type}`)).items;
   const configuration = async <T extends object>(key: string) => (await api<{ value: T }>(`/configuration/${key}`)).value;
-  const [banners, categories, subCategories, navCategories, sidebarOptions, header, footer, theme, favicon] = await Promise.all([
+  const settled = await Promise.allSettled([
     content<Omit<Banner, "id">>("banners"), content<Omit<CategoryItem, "id">>("categories"), content<Omit<SubCategory, "id">>("sub-categories"), content<Omit<NavCategoryGroup, "id">>("nav-categories"), content<Omit<SidebarOption, "id">>("sidebar-options"), configuration<HeaderConfig>("header"), configuration<FooterConfig>("footer"), configuration<ThemeConfig>("theme"), configuration<FaviconConfig>("favicon"),
   ]);
+  const value = <T,>(index: number, fallback: T): T => settled[index].status === "fulfilled" ? settled[index].value as T : fallback;
+  const banners = value(0, [] as PublicContent<Omit<Banner, "id">>[]), categories = value(1, [] as PublicContent<Omit<CategoryItem, "id">>[]), subCategories = value(2, [] as PublicContent<Omit<SubCategory, "id">>[]), navCategories = value(3, [] as PublicContent<Omit<NavCategoryGroup, "id">>[]), sidebarOptions = value(4, [] as PublicContent<Omit<SidebarOption, "id">>[]), header = value(5, {} as HeaderConfig), footer = value(6, {} as FooterConfig), theme = value(7, {} as ThemeConfig), favicon = value(8, {} as FaviconConfig);
   state = {
     ...state,
     banners: banners.map(fromContent),
