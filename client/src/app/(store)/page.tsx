@@ -249,6 +249,29 @@ function StoreHomeContent() {
         </div>
       </section>
 
+      {/* ADMIN-MANAGED CATEGORY IMAGE GRID */}
+      {categoriesList.some((category) => category.image) && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+          <div className="text-center space-y-1.5">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-wider text-foreground">Shop by category</h2>
+            <div className="h-1 w-16 bg-primary rounded-full mx-auto" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categoriesList.filter((category) => category.name !== "All" && category.image).map((category) => (
+              <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} className="group overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                <div className="aspect-square overflow-hidden bg-muted">
+                  <img src={category.image} alt={category.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                </div>
+                <div className="p-3 text-center">
+                  <h3 className="font-bold text-sm text-foreground">{category.name}</h3>
+                  {category.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{category.description}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Main Store Catalog Section */}
       <section id="products" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-6">
