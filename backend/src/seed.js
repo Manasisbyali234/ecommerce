@@ -1,0 +1,13 @@
+import bcrypt from "bcryptjs";
+import { connectDatabase } from "./config/db.js";
+import { User, Product, Coupon, Content, Setting, PaymentGateway } from "./models/index.js";
+await connectDatabase();
+await User.findOneAndUpdate({email:"admin@metromindz.local"},{fullName:"Metromindz Admin",email:"admin@metromindz.local",passwordHash:await bcrypt.hash("ChangeMe123!",12),role:"admin",status:"active"},{upsert:true,new:true});
+await Product.updateOne({sku:"AUR-WH-001"},{$setOnInsert:{name:"Aurora Wireless Headphones",slug:"aurora-wireless-headphones",sku:"AUR-WH-001",category:"Audio",price:1499,originalPrice:1999,stock:42,status:"active",image:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",description:"Wireless headphones with active noise cancellation.",features:["Active noise cancellation","35-hour battery"]}},{upsert:true});
+await Coupon.updateOne({code:"WELCOME10"},{$setOnInsert:{code:"WELCOME10",description:"10% off your first order",type:"percentage",value:10,minSpend:499,category:"All",usageLimit:1000,used:0,expires:new Date("2027-12-31"),active:true}},{upsert:true});
+await Content.updateOne({type:"categories",slug:"audio"},{$setOnInsert:{type:"categories",slug:"audio",title:"Audio",active:true,sortOrder:1,data:{description:"Headphones, earbuds and speakers",image:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"}}},{upsert:true});
+await Content.updateOne({type:"brands",slug:"metromindz"},{$setOnInsert:{type:"brands",slug:"metromindz",title:"Metromindz",active:true,sortOrder:1,data:{}}},{upsert:true});
+await Setting.updateOne({key:"shipping"},{$setOnInsert:{key:"shipping",value:{flatShippingFee:50,freeShippingMinSpend:499,codEnabled:true,estimatedDays:"3–7",blockedPincodes:[]}}},{upsert:true});
+await Setting.updateOne({key:"general"},{$setOnInsert:{key:"general",value:{storeName:"Metromindz Store",currency:"INR",timezone:"Asia/Kolkata",maintenanceMode:false}}},{upsert:true});
+await PaymentGateway.updateOne({provider:"razorpay"},{$setOnInsert:{name:"Razorpay",provider:"razorpay",enabled:false,mode:"test",fees:"Configure with your merchant account",config:{}}},{upsert:true});
+console.log("Seed complete. Admin: admin@metromindz.local / ChangeMe123!"); process.exit(0);

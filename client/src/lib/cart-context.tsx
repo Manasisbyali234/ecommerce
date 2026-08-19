@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { products, type Product } from "./mock-data";
+import { api, getAccessToken } from "./api";
 
 export type CartItem = {
   product: Product;
@@ -27,8 +28,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Initialize with 2 seed items for instant demonstration
+  // Load the authenticated customer cart; retain demo data only while offline/unauthenticated.
   useEffect(() => {
+    if (getAccessToken()) {
+      api<{ cart: { items: Array<{ product: Product; quantity: number }> } }>("/cart")
+        .then(({ cart }) => setItems(cart.items.map((item) => ({ product: item.product, quantity: item.quantity }))))
+        .catch(() => setItems([]));
+      return;
+    }
     const seedProduct1 = products.find((p) => p.id === "P-1001");
     const seedProduct3 = products.find((p) => p.id === "P-1003");
     const initial: CartItem[] = [];
@@ -46,8 +53,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ...next[existingIndex],
           quantity: next[existingIndex].quantity + quantity,
         };
+        if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: product.id, quantity: next[existingIndex].quantity }) }).catch(() => undefined);
         return next;
       }
+      if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: product.id, quantity }) }).catch(() => undefined);
       return [...prev, { product, quantity }];
     });
     setIsOpen(true);
@@ -55,6 +64,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeItem = (productId: string) => {
     setItems((prev) => prev.filter((i) => i.product.id !== productId));
+    if (getAccessToken()) api(`/cart/items/${productId}`, { method: "DELETE" }).catch(() => undefined);
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -65,6 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i))
     );
+    if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId, quantity }) }).catch(() => undefined);
   };
 
   const clearCart = () => {

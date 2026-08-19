@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ShoppingBag,
   Heart,
@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { authApi, clearAccessToken, getAccessToken, setAccessToken } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -123,6 +124,12 @@ export function StoreNavbar() {
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [loggedInPhone, setLoggedInPhone] = useState("");
 
+  useEffect(() => {
+    if (getAccessToken()) {
+      setUserLoggedIn(true);
+    }
+  }, []);
+
   const otpRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -162,7 +169,7 @@ export function StoreNavbar() {
     setAllCategoriesDrawerOpen(false);
   };
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanMobile = mobileNumber.replace(/\D/g, "");
     if (cleanMobile.length < 10) {
@@ -170,10 +177,11 @@ export function StoreNavbar() {
       return;
     }
 
-    toast.success(`OTP Sent to +91 ${cleanMobile}`, {
-      description: "Use Demo OTP code: 4321 to log in",
-    });
-    setOtpStep("otp");
+    try {
+      const result = await authApi.requestOtp(cleanMobile);
+      toast.success(`OTP Sent to +91 ${cleanMobile}`, { description: result.debugOtp ? `Development OTP: ${result.debugOtp}` : "Check your SMS for the verification code." });
+      setOtpStep("otp");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to send OTP"); }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -188,7 +196,7 @@ export function StoreNavbar() {
     }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOtp = otpValues.join("");
     if (enteredOtp.length < 4) {
@@ -196,17 +204,19 @@ export function StoreNavbar() {
       return;
     }
 
-    const cleanMobile = mobileNumber.replace(/\D/g, "") || "9876543210";
-    setUserLoggedIn(true);
-    setLoggedInPhone(`+91 ${cleanMobile.slice(0, 5)} ${cleanMobile.slice(5)}`);
-    setLoginModalOpen(false);
-
-    toast.success("Successfully Logged In!", {
-      description: `Welcome back to Metromindz Store (+91 ${cleanMobile})`,
-    });
+    const cleanMobile = mobileNumber.replace(/\D/g, "");
+    try {
+      const result = await authApi.verifyOtp(cleanMobile, enteredOtp);
+      setAccessToken(result.token);
+      setUserLoggedIn(true);
+      setLoggedInPhone(`+91 ${cleanMobile.slice(0, 5)} ${cleanMobile.slice(5)}`);
+      setLoginModalOpen(false);
+      toast.success("Successfully Logged In!", { description: `Welcome back to Metromindz Store (+91 ${cleanMobile})` });
+    } catch (error) { toast.error(error instanceof Error ? error.message : "OTP verification failed"); }
   };
 
   const handleLogout = () => {
+    clearAccessToken();
     setUserLoggedIn(false);
     setLoggedInPhone("");
     setOtpStep("mobile");

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { products, type Product } from "./mock-data";
 import { toast } from "sonner";
+import { api, getAccessToken } from "./api";
 
 type WishlistContextType = {
   wishlist: string[];
@@ -16,10 +17,15 @@ type WishlistContextType = {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  // Initial seed with 2 favorite products
   const [wishlist, setWishlist] = useState<string[]>(["P-1002", "P-1006"]);
 
+  useEffect(() => {
+    if (!getAccessToken()) return;
+    api<{ items: Product[] }>("/wishlist").then(({ items }) => setWishlist(items.map((item) => item.id))).catch(() => setWishlist([]));
+  }, []);
+
   const toggleWishlist = (productId: string, productName?: string) => {
+    if (getAccessToken()) api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to update wishlist"));
     setWishlist((prev) => {
       const isSaved = prev.includes(productId);
       const targetName = productName || products.find((p) => p.id === productId)?.name || "Product";

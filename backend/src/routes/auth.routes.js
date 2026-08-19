@@ -1,0 +1,12 @@
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { Otp, User } from "../models/index.js";
+import { asyncHandler, fail, publicUser, tokenFor } from "../utils/api.js";
+import { env } from "../config/env.js";
+import { sendOtp } from "../services/providers.js";
+const router = Router(), phone = z.string().transform((v) => v.replace(/\D/g, "")).refine((v) => /^\d{10}$/.test(v), "Enter a valid 10-digit mobile number");
+router.post("/request-otp", asyncHandler(async (req, res) => { const value = phone.parse(req.body.phone); const code = String(Math.floor(1000 + Math.random() * 9000)); await Otp.deleteMany({ phone: value }); await Otp.create({ phone: value, codeHash: await bcrypt.hash(code, 10), expiresAt: new Date(Date.now() + 5 * 60_000) }); await sendOtp(value, code); res.status(201).json({ message: "OTP sent", ...(env.otpDebug ? { debugOtp: code } : {}) }); }));
+router.post("/verify-otp", asyncHandler(async (req, res) => { const { phone: value, code } = z.object({ phone, code: z.string().regex(/^\d{4}$/, "OTP must contain 4 digits") }).parse(req.body); const otp = await Otp.findOne({ phone: value }).sort({ createdAt: -1 }); if (!otp || otp.expiresAt < new Date() || otp.attempts >= 5) throw fail(400, "OTP is invalid or expired"); otp.attempts++; await otp.save(); if (!await bcrypt.compare(code, otp.codeHash)) throw fail(400, "OTP is incorrect"); await Otp.deleteMany({ phone: value }); const user = await User.findOneAndUpdate({ phone: value }, { $setOnInsert: { phone: value, fullName: "Customer" } }, { upsert: true, new: true }); res.json({ token: tokenFor(user), user: publicUser(user) }); }));
+router.post("/login", asyncHandler(async (req, res) => { const { email, password } = z.object({ email: z.string().email(), password: z.string().min(8) }).parse(req.body); const user = await User.findOne({ email: email.toLowerCase() }); if (!user?.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw fail(401, "Invalid email or password"); if (user.status !== "active") throw fail(401, "Account is unavailable"); res.json({ token: tokenFor(user), user: publicUser(user) }); }));
+export default router;
