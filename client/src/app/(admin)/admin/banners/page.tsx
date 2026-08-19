@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -71,6 +71,7 @@ import {
   type FontWeightOption,
 } from "@/lib/store";
 import { formatCurrency } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 const placementLabel: Record<Placement, string> = {
   top: "Top Announcement Bar",
@@ -83,7 +84,8 @@ const placementLabel: Record<Placement, string> = {
 };
 
 export default function AdminBannersPage() {
-  const banners = useStore((s) => s.banners);
+  const localBanners = useStore((s) => s.banners);
+  const [banners, setBanners] = useState<Banner[]>(localBanners);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "hero" | "after_hero" | "after_category" | "after_mega_deals">("all");
@@ -148,6 +150,14 @@ export default function AdminBannersPage() {
 
   const [draft, setDraft] = useState<Omit<Banner, "id">>(emptyDraft);
 
+  const toBanner = (item: { id: string; title: string; active: boolean; data: Omit<Banner, "id"> }): Banner => ({ ...item.data, id: item.id, title: item.title, active: item.active });
+
+  useEffect(() => {
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<Banner, "id"> }> }>("/admin/content/banners")
+      .then(({ items }) => setBanners(items.map(toBanner)))
+      .catch(() => toast.error("Unable to load saved banners. Sign in as an admin first."));
+  }, []);
+
   const heroBanners = useMemo(() => banners.filter((b) => b.placement === "homepage" || !b.placement), [banners]);
   const afterHeroBanners = useMemo(() => banners.filter((b) => b.placement === "after_hero"), [banners]);
   const afterCategoryBanners = useMemo(() => banners.filter((b) => b.placement === "after_category"), [banners]);
@@ -174,17 +184,23 @@ export default function AdminBannersPage() {
     };
   }, [banners, heroBanners, adBannersCount]);
 
-  const toggle = (id: string) => {
+  const toggle = async (id: string) => {
     const b = banners.find((x) => x.id === id);
     if (b) {
-      store.updateBanner(id, { active: !b.active });
-      toast.success(`Banner ${b.active ? "paused" : "activated"}`);
+      try {
+        await api(`/admin/content/banners/${id}`, { method: "PATCH", body: JSON.stringify({ active: !b.active }) });
+        setBanners((items) => items.map((item) => item.id === id ? { ...item, active: !item.active } : item));
+        toast.success(`Banner ${b.active ? "paused" : "activated"}`);
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update banner"); }
     }
   };
 
-  const remove = (id: string) => {
-    store.removeBanner(id);
-    toast.success("Banner deleted");
+  const remove = async (id: string) => {
+    try {
+      await api(`/admin/content/banners/${id}`, { method: "DELETE" });
+      setBanners((items) => items.filter((item) => item.id !== id));
+      toast.success("Banner deleted");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete banner"); }
   };
 
   const startEdit = (b: Banner) => {
@@ -235,7 +251,7 @@ export default function AdminBannersPage() {
     reader.readAsDataURL(file);
   };
 
-  const saveBanner = () => {
+  const saveBanner = async () => {
     const finalDraft = {
       ...draft,
       title:
@@ -249,18 +265,20 @@ export default function AdminBannersPage() {
       return;
     }
 
-    if (editingId) {
-      store.updateBanner(editingId, finalDraft);
-      toast.success("Banner updated live");
-    } else {
-      const id = `b${Date.now()}`;
-      store.addBanner({ ...finalDraft, id });
-      toast.success("Hero advertisement banner published live to storefront!");
-    }
-
-    setOpen(false);
-    setDraft(emptyDraft);
-    setEditingId(null);
+    try {
+      const payload = { title: finalDraft.title, slug: finalDraft.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `banner-${Date.now()}`, active: finalDraft.active, data: finalDraft };
+      if (editingId) {
+        const { item: saved } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<Banner, "id"> } }>(`/admin/content/banners/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) });
+        const savedBanner = toBanner(saved);
+        setBanners((items) => items.map((item) => item.id === editingId ? savedBanner : item));
+        toast.success("Banner updated live");
+      } else {
+        const { item } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<Banner, "id"> } }>("/admin/content/banners", { method: "POST", body: JSON.stringify(payload) });
+        setBanners((items) => [toBanner(item), ...items]);
+        toast.success("Hero advertisement banner published live to storefront!");
+      }
+      setOpen(false); setDraft(emptyDraft); setEditingId(null);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save banner"); }
   };
 
   const [quickReplaceBanner, setQuickReplaceBanner] = useState<Banner | null>(null);
@@ -272,11 +290,13 @@ export default function AdminBannersPage() {
     setQuickImageUrl(b.imageUrl || "");
   };
 
-  const saveQuickReplace = () => {
+  const saveQuickReplace = async () => {
     if (quickReplaceBanner) {
-      store.updateBanner(quickReplaceBanner.id, { imageUrl: quickImageUrl });
-      toast.success(`Banner image replaced for "${quickReplaceBanner.title}"!`);
-      setQuickReplaceBanner(null);
+      try {
+        await api(`/admin/content/banners/${quickReplaceBanner.id}`, { method: "PATCH", body: JSON.stringify({ data: { ...quickReplaceBanner, imageUrl: quickImageUrl } }) });
+        setBanners((items) => items.map((item) => item.id === quickReplaceBanner.id ? { ...item, imageUrl: quickImageUrl } : item));
+        toast.success(`Banner image replaced for "${quickReplaceBanner.title}"!`); setQuickReplaceBanner(null);
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to replace image"); }
     }
   };
 
