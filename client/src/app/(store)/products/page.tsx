@@ -16,7 +16,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { products as initialProducts, formatCurrency, type Product } from "@/lib/mock-data";
+import { formatCurrency, type Product } from "@/lib/mock-data";
+import { useProducts } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ const categorySecondaryFilters: Record<string, SecondaryFilterConfig[]> = {
 };
 
 function ProductsContent() {
+  const initialProducts = useProducts();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addItem } = useCart();

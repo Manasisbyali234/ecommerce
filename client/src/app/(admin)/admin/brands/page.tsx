@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -45,7 +45,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { products } from "@/lib/mock-data";
+import { api } from "@/lib/api";
+import { useProducts } from "@/hooks/use-products";
 
 export interface BrandItem {
   id: string;
@@ -115,6 +116,7 @@ const initialBrands: BrandItem[] = [
 ];
 
 export default function AdminBrandsPage() {
+  const products = useProducts();
   const [brands, setBrands] = useState<BrandItem[]>(initialBrands);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,6 +135,12 @@ export default function AdminBrandsPage() {
   };
 
   const [draft, setDraft] = useState<Omit<BrandItem, "id">>(emptyDraft);
+
+  useEffect(() => {
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<BrandItem, "id"> }> }>("/admin/content/brands")
+      .then(({ items }) => setBrands(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))))
+      .catch(() => toast.error("Unable to load saved brands"));
+  }, []);
 
   // Filtered brands list
   const filteredBrands = useMemo(() => {
@@ -160,7 +168,9 @@ export default function AdminBrandsPage() {
   };
 
   // Toggle active status
-  const toggleActive = (id: string) => {
+  const toggleActive = async (id: string) => {
+    const brand = brands.find((item) => item.id === id); if (!brand) return;
+    try { await api(`/admin/content/brands/${id}`, { method: "PATCH", body: JSON.stringify({ active: !brand.active }) });
     setBrands((prev) =>
       prev.map((b) => {
         if (b.id === id) {
@@ -171,10 +181,13 @@ export default function AdminBrandsPage() {
         return b;
       })
     );
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update brand"); }
   };
 
   // Toggle featured status
-  const toggleFeatured = (id: string) => {
+  const toggleFeatured = async (id: string) => {
+    const brand = brands.find((item) => item.id === id); if (!brand) return;
+    try { await api(`/admin/content/brands/${id}`, { method: "PATCH", body: JSON.stringify({ data: { ...brand, featured: !brand.featured } }) });
     setBrands((prev) =>
       prev.map((b) => {
         if (b.id === id) {
@@ -185,6 +198,7 @@ export default function AdminBrandsPage() {
         return b;
       })
     );
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update brand"); }
   };
 
   // Start creation form
@@ -209,9 +223,11 @@ export default function AdminBrandsPage() {
   };
 
   // Delete brand
-  const handleDeleteBrand = (id: string, name: string) => {
+  const handleDeleteBrand = async (id: string, name: string) => {
+    try { await api(`/admin/content/brands/${id}`, { method: "DELETE" });
     setBrands((prev) => prev.filter((b) => b.id !== id));
     toast.error(`Removed Brand "${name}" from CMS`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to remove brand"); }
   };
 
   // Local logo image upload
@@ -228,15 +244,17 @@ export default function AdminBrandsPage() {
   };
 
   // Save changes (Create / Edit)
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!draft.name.trim()) {
       toast.error("Brand name is required");
       return;
     }
     const slug = draft.slug.trim() || draft.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-    if (editingId) {
+    const brandData = { name: draft.name, slug, description: draft.description, logo: draft.logo || "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=200", active: draft.active, featured: draft.featured };
+    try { if (editingId) {
       // Update
+      await api(`/admin/content/brands/${editingId}`, { method: "PATCH", body: JSON.stringify({ title: brandData.name, slug, active: brandData.active, data: brandData }) });
       setBrands((prev) =>
         prev.map((b) => (b.id === editingId ? { ...b, ...draft, slug } : b))
       );
@@ -252,10 +270,13 @@ export default function AdminBrandsPage() {
         active: draft.active,
         featured: draft.featured,
       };
+      const { item } = await api<{ item: { id: string } }>("/admin/content/brands", { method: "POST", body: JSON.stringify({ title: brandData.name, slug, active: brandData.active, data: brandData }) });
+      newBrand.id = item.id;
       setBrands((prev) => [...prev, newBrand]);
       toast.success(`Created brand "${draft.name}"`);
     }
     setOpen(false);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save brand"); }
   };
 
   return (

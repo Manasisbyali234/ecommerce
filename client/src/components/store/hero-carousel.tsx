@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useStore, type Banner } from "@/lib/store";
+import { api } from "@/lib/api";
 import { products, formatCurrency } from "@/lib/mock-data";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,16 @@ const getFontSizeClass = (size?: string, defaultClass = "text-4xl sm:text-5xl lg
 };
 
 export function HeroCarousel() {
-  const allBanners = useStore((s) => s.banners);
+  const fallbackBanners = useStore((s) => s.banners);
+  const [allBanners, setAllBanners] = useState<Banner[]>(fallbackBanners);
   const coupons = useStore((s) => s.coupons.filter((c) => c.active));
   const { addItem } = useCart();
+
+  useEffect(() => {
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<Banner, "id"> }> }>("/content/banners")
+      .then(({ items }) => setAllBanners(items.map((item) => ({ ...item.data, id: item.id, title: item.title, active: item.active }))))
+      .catch(() => undefined);
+  }, []);
 
   // Active hero section placement banners ONLY
   const heroBanners = useMemo(

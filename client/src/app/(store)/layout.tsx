@@ -5,6 +5,7 @@ import { WishlistProvider } from "@/lib/wishlist-context";
 import { StoreNavbar } from "@/components/store/store-navbar";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { StoreFooter } from "@/components/store/store-footer";
+import { StorefrontDataHydrator } from "@/components/store/storefront-data-hydrator";
 
 export default function StoreLayout({
   children,
@@ -14,6 +15,7 @@ export default function StoreLayout({
   return (
     <CartProvider>
       <WishlistProvider>
+        <StorefrontDataHydrator />
         <div
           className="flex min-h-screen flex-col bg-background text-foreground"
           suppressHydrationWarning

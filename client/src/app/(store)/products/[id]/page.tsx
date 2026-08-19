@@ -44,7 +44,8 @@ import {
   Heart,
 } from "lucide-react";
 import { toast } from "sonner";
-import { products, formatCurrency, defaultAboutSections, defaultAdditionalInfo, type Product, type ProductReview, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
+import { formatCurrency, defaultAboutSections, defaultAdditionalInfo, type Product, type ProductReview, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
+import { useProducts } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart-context";
 import { useWishlist } from "@/lib/wishlist-context";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,7 @@ interface PageProps {
 }
 
 export default function ProductDetailPage({ params }: PageProps) {
+  const products = useProducts();
   const resolvedParams = use(params);
   const router = useRouter();
   const { addItem, openCart } = useCart();

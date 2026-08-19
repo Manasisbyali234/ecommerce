@@ -18,7 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { products as initialProducts, formatCurrency, type Product } from "@/lib/mock-data";
+import { formatCurrency, type Product } from "@/lib/mock-data";
+import { useProducts } from "@/hooks/use-products";
 import { useStore, store } from "@/lib/store";
 import { useCart } from "@/lib/cart-context";
 import { useWishlist } from "@/lib/wishlist-context";
@@ -39,6 +40,7 @@ import { HeroCarousel } from "@/components/store/hero-carousel";
 const CATEGORIES = ["All", "Audio", "Bags", "Home", "Footwear", "Apparel", "Electronics"];
 
 function StoreHomeContent() {
+  const initialProducts = useProducts();
   const searchParams = useSearchParams();
   const { addItem } = useCart();
   const { wishlist, toggleWishlist, isInWishlist } = useWishlist();

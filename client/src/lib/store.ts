@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { api } from "./api";
 import {
   orders as seedOrders,
   invoices as seedInvoices,
@@ -1115,6 +1116,31 @@ function getSnapshot() {
 export function useStore<T>(selector: (s: State) => T): T {
   const currentStore = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return selector(currentStore);
+}
+
+type PublicContent<T> = { id: string; title: string; active: boolean; data: T };
+const fromContent = <T extends object>(item: PublicContent<T>) => ({ ...item.data, id: item.id, active: item.active, title: item.title });
+
+/** Loads the admin-managed public configuration once for all storefront components. */
+export async function hydrateStorefront() {
+  const content = async <T extends object>(type: string) => (await api<{ items: PublicContent<T>[] }>(`/content/${type}`)).items;
+  const configuration = async <T extends object>(key: string) => (await api<{ value: T }>(`/configuration/${key}`)).value;
+  const [banners, categories, subCategories, navCategories, sidebarOptions, header, footer, theme, favicon] = await Promise.all([
+    content<Omit<Banner, "id">>("banners"), content<Omit<CategoryItem, "id">>("categories"), content<Omit<SubCategory, "id">>("sub-categories"), content<Omit<NavCategoryGroup, "id">>("nav-categories"), content<Omit<SidebarOption, "id">>("sidebar-options"), configuration<HeaderConfig>("header"), configuration<FooterConfig>("footer"), configuration<ThemeConfig>("theme"), configuration<FaviconConfig>("favicon"),
+  ]);
+  state = {
+    ...state,
+    banners: banners.map(fromContent),
+    categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
+    subCategories: subCategories.map(fromContent),
+    navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
+    sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })),
+    headerConfig: Object.keys(header).length ? header : state.headerConfig,
+    footerConfig: Object.keys(footer).length ? footer : state.footerConfig,
+    themeConfig: Object.keys(theme).length ? theme : state.themeConfig,
+    faviconConfig: Object.keys(favicon).length ? favicon : state.faviconConfig,
+  };
+  emit();
 }
 
 export const store = {
