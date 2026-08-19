@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+// Use Next's same-origin proxy by default. This avoids browser CORS failures on refresh.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/backend-api";
 const TOKEN_KEY = "metromindz_access_token";
 
 export function getAccessToken() { return typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY); }
