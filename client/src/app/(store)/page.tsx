@@ -64,6 +64,10 @@ function StoreHomeContent() {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
   const [contentLoadError, setContentLoadError] = useState(false);
+  const categoryDeals = useMemo(
+    () => categoriesList.filter((category) => category.name !== "All" && Boolean(category.image)),
+    [categoriesList]
+  );
 
   // Fetch visual CMS records directly so hard refreshes always rehydrate from MongoDB.
   useEffect(() => {
@@ -898,17 +902,21 @@ function StoreHomeContent() {
               image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600",
               link: "/products?category=Bags",
             },
-          ].map((deal, idx) => (
+          ].map((deal, idx) => {
+            const databaseCategory = categoriesList.filter((category) => category.name !== "All" && category.image)[idx];
+            if (!databaseCategory) return null;
+            const renderedDeal = { title: databaseCategory.name, offer: databaseCategory.description || "Explore collection", image: databaseCategory.image!, link: `/products?category=${encodeURIComponent(databaseCategory.name)}` };
+            return (
             <Link
               key={`deal-card-${idx}`}
-              href={deal.link}
+              href={renderedDeal.link}
               className="snap-start shrink-0 w-60 sm:w-64 rounded-2xl border border-muted-foreground/20 bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all duration-300 group flex flex-col justify-between"
             >
               {/* Portrait 3:4 Image Container */}
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
                 <img
-                  src={deal.image}
-                  alt={deal.title}
+                  src={renderedDeal.image}
+                  alt={renderedDeal.title}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 
@@ -926,14 +934,15 @@ function StoreHomeContent() {
               {/* Card Banner Details */}
               <div className="p-3 text-center bg-card border-t space-y-0.5">
                 <h3 className="text-xs font-semibold text-muted-foreground line-clamp-1">
-                  {deal.title}
+                  {renderedDeal.title}
                 </h3>
                 <div className="text-base sm:text-lg font-black tracking-tight text-foreground">
-                  {deal.offer}
+                  {renderedDeal.offer}
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </section>
 
