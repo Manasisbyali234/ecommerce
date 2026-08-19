@@ -17,4 +17,5 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 export const authApi = {
   requestOtp: (phone: string) => api<{ message: string; debugOtp?: string }>("/auth/request-otp", { method: "POST", body: JSON.stringify({ phone }) }),
   verifyOtp: (phone: string, code: string) => api<{ token: string; user: { phone?: string; fullName?: string } }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, code }) }),
+  adminLogin: (email: string, password: string) => api<{ token: string; user: { role: string; fullName?: string; email?: string } }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 };

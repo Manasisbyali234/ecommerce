@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, ArrowUpRight } from "lucide-react";
+import { AdminSessionGate } from "@/components/admin-session-gate";
 
 export default function AdminLayout({
   children,
@@ -13,6 +14,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
+    <AdminSessionGate>
     <SidebarProvider>
       <div
         className="flex min-h-screen w-full bg-background text-foreground"
@@ -45,5 +47,6 @@ export default function AdminLayout({
       </div>
       <Toaster />
     </SidebarProvider>
+    </AdminSessionGate>
   );
 }
