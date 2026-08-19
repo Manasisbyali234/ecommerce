@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/dialog";
 
 import { HeroCarousel } from "@/components/store/hero-carousel";
+import { api } from "@/lib/api";
+import type { CategoryItem, SubCategory } from "@/lib/store";
 
 const CATEGORIES = ["All", "Audio", "Bags", "Home", "Footwear", "Apparel", "Electronics"];
 
@@ -59,8 +61,18 @@ function StoreHomeContent() {
     return banners.find((b) => b.placement === "after_mega_deals" && b.active);
   }, [banners]);
 
-  const subCategories = useStore((s) => s.subCategories.filter((sc) => sc.active));
-  const categoriesList = useStore((s) => s.categories.filter((c) => c.active));
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
+
+  // Fetch visual CMS records directly so hard refreshes always rehydrate from MongoDB.
+  useEffect(() => {
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<CategoryItem, "id"> }> }>("/content/categories")
+      .then(({ items }) => setCategoriesList(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))))
+      .catch(() => setCategoriesList([]));
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<SubCategory, "id"> }> }>("/content/sub-categories")
+      .then(({ items }) => setSubCategories(items.map((item) => ({ ...item.data, id: item.id, title: item.data.title || item.title, active: item.active }))))
+      .catch(() => setSubCategories([]));
+  }, []);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
