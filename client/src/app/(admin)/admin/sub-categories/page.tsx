@@ -80,8 +80,7 @@ function StatCard({
 }
 
 export default function AdminSubCategoriesPage() {
-  const fallbackSubCategories = useStore((s) => s.subCategories);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>(fallbackSubCategories);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -208,7 +208,7 @@ const presetTags = [
 ];
 
 export default function ProductsPage() {
-  const [items, setItems] = useState<Product[]>(seed);
+  const [items, setItems] = useState<Product[]>([]);
   useEffect(() => { api<{ items: Product[] }>("/admin/products").then(({ items: saved }) => setItems(saved)).catch(() => undefined); }, []);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");

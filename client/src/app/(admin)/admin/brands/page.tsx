@@ -117,7 +117,7 @@ const initialBrands: BrandItem[] = [
 
 export default function AdminBrandsPage() {
   const products = useProducts();
-  const [brands, setBrands] = useState<BrandItem[]>(initialBrands);
+  const [brands, setBrands] = useState<BrandItem[]>([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

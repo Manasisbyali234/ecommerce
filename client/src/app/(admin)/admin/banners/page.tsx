@@ -84,8 +84,7 @@ const placementLabel: Record<Placement, string> = {
 };
 
 export default function AdminBannersPage() {
-  const localBanners = useStore((s) => s.banners);
-  const [banners, setBanners] = useState<Banner[]>(localBanners);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "hero" | "after_hero" | "after_category" | "after_mega_deals">("all");

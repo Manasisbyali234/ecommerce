@@ -71,8 +71,7 @@ function StatCard({
 }
 
 export default function AdminCategoriesPage() {
-  const fallbackCategories = useStore((s) => s.categories);
-  const [categories, setCategories] = useState<CategoryItem[]>(fallbackCategories);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
