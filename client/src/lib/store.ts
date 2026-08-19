@@ -1143,6 +1143,39 @@ export async function hydrateStorefront() {
   emit();
 }
 
+/** Hydrates every shared admin-console collection from its protected API. */
+export async function hydrateAdminStore() {
+  const content = async <T extends object>(type: string) => (await api<{ items: PublicContent<T>[] }>(`/admin/content/${type}`)).items;
+  const [coupons, orders, invoices, categories, subCategories, banners, navCategories, sidebarOptions, customerTiers, header, footer, theme, favicon] = await Promise.all([
+    api<{ items: Coupon[] }>("/admin/coupons").then((r) => r.items),
+    api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then((r) => r.items),
+    api<{ items: Array<Record<string, unknown>> }>("/admin/invoices").then((r) => r.items),
+    content<Omit<CategoryItem, "id">>("categories"), content<Omit<SubCategory, "id">>("sub-categories"), content<Omit<Banner, "id">>("banners"), content<Omit<NavCategoryGroup, "id">>("nav-categories"), content<Omit<SidebarOption, "id">>("sidebar-options"), content<Omit<CustomerTier, "id">>("customer-tiers"),
+    api<{ setting: { value: HeaderConfig } }>("/admin/settings/header").then((r) => r.setting.value), api<{ setting: { value: FooterConfig } }>("/admin/settings/footer").then((r) => r.setting.value), api<{ setting: { value: ThemeConfig } }>("/admin/settings/theme").then((r) => r.setting.value), api<{ setting: { value: FaviconConfig } }>("/admin/settings/favicon").then((r) => r.setting.value),
+  ]);
+  state = {
+    ...state, coupons,
+    orders: orders.map((order) => ({ id: String(order.id), customer: String((order.customer as Record<string, unknown>)?.fullName || "Customer"), email: String((order.customer as Record<string, unknown>)?.email || ""), total: Number(order.total || 0), items: Array.isArray(order.items) ? order.items.length : 0, status: order.status as Order["status"], paymentStatus: order.paymentStatus as Order["paymentStatus"], paymentMethod: String(order.paymentMethod || ""), date: String(order.createdAt || "").slice(0, 10) })),
+    invoices: invoices.map((invoice) => ({ id: String(invoice.id), orderId: String((invoice.order as Record<string, unknown>)?.id || invoice.order || ""), customer: "Customer", amount: Number(invoice.amount || 0), status: invoice.status as Invoice["status"], issued: String(invoice.issuedAt || "").slice(0, 10), due: String(invoice.dueAt || "").slice(0, 10) })),
+    categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })), subCategories: subCategories.map(fromContent), banners: banners.map(fromContent), navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })), sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })), customerTiers: customerTiers.map(fromContent),
+    headerConfig: Object.keys(header || {}).length ? header : state.headerConfig, footerConfig: Object.keys(footer || {}).length ? footer : state.footerConfig, themeConfig: Object.keys(theme || {}).length ? theme : state.themeConfig, faviconConfig: Object.keys(favicon || {}).length ? favicon : state.faviconConfig,
+  };
+  emit();
+}
+
+/** Loads the authenticated customer's profile, saved addresses, and order history. */
+export async function hydrateCustomerStore() {
+  const [{ user }, { items }] = await Promise.all([api<{ user: Record<string, unknown> }>("/me"), api<{ items: Array<Record<string, unknown>> }>("/orders")]);
+  const profile = (user.profile || {}) as Record<string, string>;
+  state = {
+    ...state,
+    customerProfile: { fullName: String(user.fullName || ""), email: String(user.email || ""), phone: String(user.phone || ""), altPhone: profile.altPhone, gender: profile.gender || "", dob: profile.dob || "" },
+    customerAddresses: ((user.addresses || []) as CustomerAddress[]),
+    orders: items.map((order) => ({ id: String(order.id), customer: String((order.customer as Record<string, unknown>)?.fullName || "Customer"), email: String((order.customer as Record<string, unknown>)?.email || ""), total: Number(order.total || 0), items: Array.isArray(order.items) ? order.items.length : 0, status: order.status as Order["status"], paymentStatus: order.paymentStatus as Order["paymentStatus"], paymentMethod: String(order.paymentMethod || ""), date: String(order.createdAt || "").slice(0, 10) })),
+  };
+  emit();
+}
+
 export const store = {
   getOrders: () => state.orders,
   getInvoices: () => state.invoices,
@@ -1351,6 +1384,7 @@ export const store = {
   updateCustomerProfile(patch: Partial<CustomerProfile>) {
     state.customerProfile = { ...state.customerProfile, ...patch };
     emit();
+    api("/me", { method: "PATCH", body: JSON.stringify({ fullName: state.customerProfile.fullName, email: state.customerProfile.email, altPhone: state.customerProfile.altPhone, gender: state.customerProfile.gender, dob: state.customerProfile.dob }) }).catch(() => undefined);
   },
 
   addCustomerAddress(addr: Omit<CustomerAddress, "id">) {
@@ -1361,6 +1395,7 @@ export const store = {
     }
     state.customerAddresses = [newAddr, ...state.customerAddresses];
     emit();
+    api<{ addresses: CustomerAddress[] }>("/me/addresses", { method: "POST", body: JSON.stringify(newAddr) }).then((result) => { state.customerAddresses = result.addresses; emit(); }).catch(() => undefined);
   },
 
   updateCustomerAddress(id: string, patch: Partial<CustomerAddress>) {
@@ -1371,11 +1406,14 @@ export const store = {
       a.id === id ? { ...a, ...patch } : a
     );
     emit();
+    const address = state.customerAddresses.find((item) => item.id === id);
+    if (address) api<{ addresses: CustomerAddress[] }>(`/me/addresses/${id}`, { method: "PATCH", body: JSON.stringify(address) }).then((result) => { state.customerAddresses = result.addresses; emit(); }).catch(() => undefined);
   },
 
   removeCustomerAddress(id: string) {
     state.customerAddresses = state.customerAddresses.filter((a) => a.id !== id);
     emit();
+    api(`/me/addresses/${id}`, { method: "DELETE" }).catch(() => undefined);
   },
 
   setDefaultCustomerAddress(id: string) {

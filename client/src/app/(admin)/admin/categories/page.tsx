@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { api } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +71,8 @@ function StatCard({
 }
 
 export default function AdminCategoriesPage() {
-  const categories = useStore((s) => s.categories);
+  const fallbackCategories = useStore((s) => s.categories);
+  const [categories, setCategories] = useState<CategoryItem[]>(fallbackCategories);
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,6 +94,12 @@ export default function AdminCategoriesPage() {
   const [quickImageUrl, setQuickImageUrl] = useState("");
   const quickFileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<CategoryItem, "id"> }> }>("/admin/content/categories")
+      .then(({ items }) => setCategories(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))))
+      .catch(() => toast.error("Unable to load saved categories"));
+  }, []);
+
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return categories;
     const q = searchQuery.toLowerCase();
@@ -111,11 +119,10 @@ export default function AdminCategoriesPage() {
     };
   }, [categories]);
 
-  const toggleActive = (id: string) => {
+  const toggleActive = async (id: string) => {
     const cat = categories.find((x) => x.id === id);
     if (cat) {
-      store.updateCategory(id, { active: !cat.active });
-      toast.success(`Category "${cat.name}" ${cat.active ? "paused" : "activated"}`);
+      try { await api(`/admin/content/categories/${id}`, { method: "PATCH", body: JSON.stringify({ active: !cat.active }) }); setCategories((items) => items.map((item) => item.id === id ? { ...item, active: !item.active } : item)); toast.success(`Category "${cat.name}" ${cat.active ? "paused" : "activated"}`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update category"); }
     }
   };
 
@@ -132,7 +139,7 @@ export default function AdminCategoriesPage() {
     setOpen(true);
   };
 
-  const saveCategory = () => {
+  const saveCategory = async () => {
     if (!draft.name.trim()) {
       toast.error("Category Name is required");
       return;
@@ -141,27 +148,16 @@ export default function AdminCategoriesPage() {
     const slug = draft.slug.trim() || draft.name.trim().toLowerCase().replace(/\s+/g, "-");
     const payload = { ...draft, slug };
 
-    if (editingId) {
-      store.updateCategory(editingId, payload);
-      toast.success(`Category "${draft.name}" updated live!`);
-    } else {
-      store.addCategory(payload);
-      toast.success(`New Category "${draft.name}" added live to storefront!`);
-    }
-
-    setOpen(false);
-    setEditingId(null);
-    setDraft(emptyDraft);
+    try { if (editingId) { const { item } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<CategoryItem, "id"> } }>(`/admin/content/categories/${editingId}`, { method: "PATCH", body: JSON.stringify({ title: payload.name, slug: payload.slug, active: payload.active, data: payload }) }); const saved = { ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }; setCategories((items) => items.map((item) => item.id === editingId ? saved : item)); toast.success(`Category "${draft.name}" updated live!`); } else { const { item } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<CategoryItem, "id"> } }>("/admin/content/categories", { method: "POST", body: JSON.stringify({ title: payload.name, slug: payload.slug, active: payload.active, data: payload }) }); setCategories((items) => [{ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }, ...items]); toast.success(`New Category "${draft.name}" added live to storefront!`); } setOpen(false); setEditingId(null); setDraft(emptyDraft); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save category"); }
   };
 
-  const removeCategory = (id: string) => {
+  const removeCategory = async (id: string) => {
     const cat = categories.find((c) => c.id === id);
     if (cat?.name === "All") {
       toast.error("Cannot delete default 'All' category");
       return;
     }
-    store.removeCategory(id);
-    toast.success("Category removed");
+    try { await api(`/admin/content/categories/${id}`, { method: "DELETE" }); setCategories((items) => items.filter((item) => item.id !== id)); toast.success("Category removed"); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to remove category"); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,11 +184,9 @@ export default function AdminCategoriesPage() {
     setQuickImageUrl(cat.image || "");
   };
 
-  const saveQuickReplace = () => {
+  const saveQuickReplace = async () => {
     if (quickReplaceCard) {
-      store.updateCategory(quickReplaceCard.id, { image: quickImageUrl });
-      toast.success(`Image replaced for "${quickReplaceCard.name}"!`);
-      setQuickReplaceCard(null);
+      try { await api(`/admin/content/categories/${quickReplaceCard.id}`, { method: "PATCH", body: JSON.stringify({ data: { ...quickReplaceCard, image: quickImageUrl } }) }); setCategories((items) => items.map((item) => item.id === quickReplaceCard.id ? { ...item, image: quickImageUrl } : item)); toast.success(`Image replaced for "${quickReplaceCard.name}"!`); setQuickReplaceCard(null); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to replace image"); }
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { api } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -79,7 +80,8 @@ function StatCard({
 }
 
 export default function AdminSubCategoriesPage() {
-  const subCategories = useStore((s) => s.subCategories);
+  const fallbackSubCategories = useStore((s) => s.subCategories);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>(fallbackSubCategories);
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -101,6 +103,8 @@ export default function AdminSubCategoriesPage() {
   const [quickReplaceCard, setQuickReplaceCard] = useState<SubCategory | null>(null);
   const [quickImageUrl, setQuickImageUrl] = useState("");
   const quickFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<SubCategory, "id"> }> }>("/admin/content/sub-categories").then(({ items }) => setSubCategories(items.map((item) => ({ ...item.data, id: item.id, title: item.data.title || item.title, active: item.active })))).catch(() => toast.error("Unable to load saved subcategories")); }, []);
 
   const filteredItems = useMemo(() => {
     let result = subCategories;
@@ -125,11 +129,10 @@ export default function AdminSubCategoriesPage() {
     };
   }, [subCategories]);
 
-  const toggleActive = (id: string) => {
+  const toggleActive = async (id: string) => {
     const sc = subCategories.find((x) => x.id === id);
     if (sc) {
-      store.updateSubCategory(id, { active: !sc.active });
-      toast.success(`Sub Category "${sc.title}" ${sc.active ? "paused" : "activated"}`);
+      try { await api(`/admin/content/sub-categories/${id}`, { method: "PATCH", body: JSON.stringify({ active: !sc.active }) }); setSubCategories((items) => items.map((item) => item.id === id ? { ...item, active: !item.active } : item)); toast.success(`Sub Category "${sc.title}" ${sc.active ? "paused" : "activated"}`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update subcategory"); }
     }
   };
 
@@ -146,28 +149,18 @@ export default function AdminSubCategoriesPage() {
     setOpen(true);
   };
 
-  const saveSubCategory = () => {
+  const saveSubCategory = async () => {
     if (!draft.title.trim()) {
       toast.error("Sub Category Title is required");
       return;
     }
 
-    if (editingId) {
-      store.updateSubCategory(editingId, draft);
-      toast.success("Sub Category updated live!");
-    } else {
-      store.addSubCategory(draft);
-      toast.success("New Sub Category added live to storefront!");
-    }
-
-    setOpen(false);
-    setEditingId(null);
-    setDraft(emptyDraft);
+    const slug = draft.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    try { if (editingId) { const { item } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<SubCategory, "id"> } }>(`/admin/content/sub-categories/${editingId}`, { method: "PATCH", body: JSON.stringify({ title: draft.title, slug, active: draft.active, data: draft }) }); const saved = { ...item.data, id: item.id, title: item.data.title || item.title, active: item.active }; setSubCategories((items) => items.map((item) => item.id === editingId ? saved : item)); toast.success("Sub Category updated live!"); } else { const { item } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<SubCategory, "id"> } }>("/admin/content/sub-categories", { method: "POST", body: JSON.stringify({ title: draft.title, slug, active: draft.active, data: draft }) }); setSubCategories((items) => [{ ...item.data, id: item.id, title: item.data.title || item.title, active: item.active }, ...items]); toast.success("New Sub Category added live to storefront!"); } setOpen(false); setEditingId(null); setDraft(emptyDraft); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save subcategory"); }
   };
 
-  const removeSubCategory = (id: string) => {
-    store.removeSubCategory(id);
-    toast.success("Sub category removed");
+  const removeSubCategory = async (id: string) => {
+    try { await api(`/admin/content/sub-categories/${id}`, { method: "DELETE" }); setSubCategories((items) => items.filter((item) => item.id !== id)); toast.success("Sub category removed"); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to remove subcategory"); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,11 +187,9 @@ export default function AdminSubCategoriesPage() {
     setQuickImageUrl(sc.image || "");
   };
 
-  const saveQuickReplace = () => {
+  const saveQuickReplace = async () => {
     if (quickReplaceCard) {
-      store.updateSubCategory(quickReplaceCard.id, { image: quickImageUrl });
-      toast.success(`Image replaced for "${quickReplaceCard.title}"!`);
-      setQuickReplaceCard(null);
+      try { await api(`/admin/content/sub-categories/${quickReplaceCard.id}`, { method: "PATCH", body: JSON.stringify({ data: { ...quickReplaceCard, image: quickImageUrl } }) }); setSubCategories((items) => items.map((item) => item.id === quickReplaceCard.id ? { ...item, image: quickImageUrl } : item)); toast.success(`Image replaced for "${quickReplaceCard.title}"!`); setQuickReplaceCard(null); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to replace image"); }
     }
   };
 

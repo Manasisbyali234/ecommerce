@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, ArrowUpRight } from "lucide-react";
 import { AdminSessionGate } from "@/components/admin-session-gate";
+import { AdminDataHydrator } from "@/components/admin-data-hydrator";
 
 export default function AdminLayout({
   children,
@@ -15,6 +16,7 @@ export default function AdminLayout({
 }) {
   return (
     <AdminSessionGate>
+    <AdminDataHydrator />
     <SidebarProvider>
       <div
         className="flex min-h-screen w-full bg-background text-foreground"

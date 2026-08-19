@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
 import { useStore, store, type Coupon } from "@/lib/store";
 import { evaluateCoupon, type CartLine } from "@/lib/coupons";
+import { api, getAccessToken } from "@/lib/api";
 import {
   formatCurrency,
   savedAddresses,
@@ -134,7 +135,7 @@ export default function StorefrontCheckoutPage() {
     setCouponCode("");
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (items.length === 0) {
       toast.error("Your shopping cart is empty");
       return;
@@ -147,33 +148,16 @@ export default function StorefrontCheckoutPage() {
       }
     }
 
-    const seq = 10240 + store.getOrders().length;
-    const orderId = `#${seq}`;
-
-    const newOrder: Order = {
-      id: orderId,
-      customer: activeAddress.name,
-      email: `${activeAddress.name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-      total: Math.round(total),
-      items: items.reduce((sum, i) => sum + i.quantity, 0),
-      status: "processing",
-      paymentStatus: "paid",
-      date: new Date().toISOString().slice(0, 10),
-    };
-
-    // Add order to shared store & update coupon usage
-    store.addOrder(newOrder);
-    if (appliedCoupon) {
-      store.incrementCouponUsage(appliedCoupon.id);
-    }
-
-    // Clear cart & navigate to confirmation page
-    clearCart();
-    toast.success(`Order ${orderId} placed successfully!`, {
-      description: "Order synced live to Admin Dashboard under Orders",
-    });
-
-    router.push(`/order-success?orderId=${encodeURIComponent(orderId)}`);
+    if (!getAccessToken()) { toast.error("Please sign in before placing an order"); return; }
+    try {
+      const address = isAddingCustomAddress
+        ? { ...customAddress, type: "Home", isDefault: false }
+        : { fullName: activeAddress.name, phone: savedAddresses.find((item) => item.id === selectedAddressId)?.phone || "0000000000", street: activeAddress.street, city: activeAddress.city, state: activeAddress.state, pincode: activeAddress.pincode, type: "Home", isDefault: false };
+      const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod: "cod" }) });
+      clearCart();
+      toast.success(`Order ${order.orderNumber} placed successfully!`, { description: "Order synced live to Admin Dashboard" });
+      router.push(`/order-success?orderId=${encodeURIComponent(order.orderNumber || order.id)}`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to place order"); }
   };
 
   const availableCoupons = coupons.filter((c) => c.active);

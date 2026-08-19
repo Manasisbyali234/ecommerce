@@ -85,6 +85,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { products as seed, formatCurrency, defaultAdditionalInfo, type Product, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 const defaultAboutSections: AboutProductSection[] = [
   {
@@ -208,6 +209,7 @@ const presetTags = [
 
 export default function ProductsPage() {
   const [items, setItems] = useState<Product[]>(seed);
+  useEffect(() => { api<{ items: Product[] }>("/admin/products").then(({ items: saved }) => setItems(saved)).catch(() => undefined); }, []);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -447,7 +449,7 @@ export default function ProductsPage() {
   };
 
   // Save product handler (Create or Update)
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!formData.name || !formData.sku) {
       toast.error("Product Name and SKU are required");
       setActiveTab("basic");
@@ -459,8 +461,11 @@ export default function ProductsPage() {
       .map((f) => f.trim())
       .filter(Boolean);
 
-    if (editingId) {
+    const slug = (formData.name || "product").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const payload = { name: formData.name, slug, sku: formData.sku, category: formData.category || "Audio", brand: formData.brand, gender: formData.gender, price: Number(formData.price) || 0, originalPrice: Number(formData.originalPrice) || 0, stock: Number(formData.stock) || 0, status: formData.status || "active", image: formData.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600", images: formData.images || [], description: formData.description, features: parsedFeatures, specs: formData.specs || {}, colors: formData.colors || [], sizes: formData.sizes || [], tags: formData.tags || [], codAvailable: formData.codAvailable ?? true, returnAvailable: formData.returnAvailable ?? true, exchangeAvailable: formData.exchangeAvailable ?? true, warrantyPeriod: formData.warrantyPeriod };
+    try { if (editingId) {
       // Update existing
+      await api(`/admin/products/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) });
       setItems((prev) =>
         prev.map((p) =>
           p.id === editingId
@@ -522,21 +527,28 @@ export default function ProductsPage() {
           ? formData.additionalInfoSections
           : defaultAdditionalInfo(formData),
       };
+      const { product: saved } = await api<{ product: Product }>("/admin/products", { method: "POST", body: JSON.stringify(payload) });
+      newProduct.id = saved.id;
       setItems([newProduct, ...items]);
       toast.success(`Created product ${newProduct.name}`);
     }
 
     setOpenModal(false);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save product"); }
   };
 
   // Delete Product
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
+    try { await api(`/admin/products/${id}`, { method: "DELETE" });
     setItems((prev) => prev.filter((p) => p.id !== id));
     toast.error("Product deleted from catalog");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete product"); }
   };
 
   // Toggle Status
-  const toggleStatus = (id: string) => {
+  const toggleStatus = async (id: string) => {
+    const current = items.find((p) => p.id === id); if (!current) return;
+    try { await api(`/admin/products/${id}`, { method: "PATCH", body: JSON.stringify({ status: current.status === "active" ? "draft" : "active" }) });
     setItems((prev) =>
       prev.map((p) =>
         p.id === id
@@ -545,6 +557,7 @@ export default function ProductsPage() {
       )
     );
     toast.success("Product status toggled successfully!");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update product"); }
   };
 
   // Tag Handlers
