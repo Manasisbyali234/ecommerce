@@ -7,7 +7,8 @@ export function clearAccessToken() { localStorage.removeItem(TOKEN_KEY); }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...options.headers } });
+  const hasBody = options.body !== undefined && options.body !== null;
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { ...(hasBody ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}), ...options.headers } });
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Request failed");

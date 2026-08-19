@@ -63,12 +63,13 @@ function StoreHomeContent() {
 
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
+  const [contentLoadError, setContentLoadError] = useState(false);
 
   // Fetch visual CMS records directly so hard refreshes always rehydrate from MongoDB.
   useEffect(() => {
     api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<CategoryItem, "id"> }> }>("/content/categories")
-      .then(({ items }) => setCategoriesList(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))))
-      .catch(() => setCategoriesList([]));
+      .then(({ items }) => { setCategoriesList(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))); setContentLoadError(false); })
+      .catch(() => { setCategoriesList([]); setContentLoadError(true); });
     api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<SubCategory, "id"> }> }>("/content/sub-categories")
       .then(({ items }) => setSubCategories(items.map((item) => ({ ...item.data, id: item.id, title: item.data.title || item.title, active: item.active }))))
       .catch(() => setSubCategories([]));
@@ -283,6 +284,7 @@ function StoreHomeContent() {
           </div>
         </section>
       )}
+      {contentLoadError && <p className="mx-auto max-w-7xl px-4 text-center text-sm text-destructive">Store categories could not be loaded. Please verify the backend API is running and reachable.</p>}
 
       {/* Main Store Catalog Section */}
       <section id="products" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
