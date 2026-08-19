@@ -296,7 +296,7 @@ export type PaymentGateway = {
   volume30d: number;
 };
 
-export const products: Product[] = [
+const legacyProducts: Product[] = [
   {
     id: "P-1001",
     name: "Aurora Wireless Headphones",
@@ -665,7 +665,7 @@ export const products: Product[] = [
   },
 ];
 
-export const orders: Order[] = [
+const legacyOrders: Order[] = [
   {
     id: "#ORD-1092",
     customer: "Aakash Sharma",
@@ -840,7 +840,7 @@ export const orders: Order[] = [
   },
 ];
 
-export const invoices: Invoice[] = [
+const legacyInvoices: Invoice[] = [
   { id: "INV-2026-0142", orderId: "#10234", customer: "Priya Shah", amount: 368.99, status: "paid", issued: "2026-07-25", due: "2026-08-08" },
   { id: "INV-2026-0141", orderId: "#10233", customer: "Marcus Chen", amount: 149.99, status: "paid", issued: "2026-07-25", due: "2026-08-08" },
   { id: "INV-2026-0140", orderId: "#10232", customer: "Lena Ortiz", amount: 78.0, status: "pending", issued: "2026-07-24", due: "2026-08-07" },
@@ -849,7 +849,7 @@ export const invoices: Invoice[] = [
   { id: "INV-2026-0137", orderId: "#10228", customer: "Yuki Tanaka", amount: 199.0, status: "paid", issued: "2026-07-20", due: "2026-08-03" },
 ];
 
-export const shipments: Shipment[] = [
+const legacyShipments: Shipment[] = [
   { id: "SHP-88112", orderId: "#10233", customer: "Marcus Chen", carrier: "UPS", tracking: "1Z999AA10123456784", status: "in_transit", destination: "Austin, TX", eta: "2026-07-28" },
   { id: "SHP-88111", orderId: "#10231", customer: "Jonas Weber", carrier: "DHL", tracking: "JD0002123456789", status: "delivered", destination: "Berlin, DE", eta: "2026-07-23" },
   { id: "SHP-88110", orderId: "#10228", customer: "Yuki Tanaka", carrier: "FedEx", tracking: "774893456712", status: "out_for_delivery", destination: "Tokyo, JP", eta: "2026-07-27" },
@@ -858,7 +858,7 @@ export const shipments: Shipment[] = [
   { id: "SHP-88107", orderId: "#10220", customer: "Chris Wu", carrier: "FedEx", tracking: "774893456800", status: "returned", destination: "Toronto, CA", eta: "2026-07-19" },
 ];
 
-export const gateways: PaymentGateway[] = [
+const legacyGateways: PaymentGateway[] = [
   { id: "gw-stripe", name: "Stripe", provider: "stripe", enabled: true, mode: "live", fees: "2.9% + ₹3", transactions30d: 1247, volume30d: 84210.5 },
   { id: "gw-paypal", name: "PayPal", provider: "paypal", enabled: true, mode: "live", fees: "3.49% + ₹5", transactions30d: 412, volume30d: 21540.0 },
   { id: "gw-paddle", name: "Paddle", provider: "paddle", enabled: false, mode: "test", fees: "5% + ₹5", transactions30d: 0, volume30d: 0 },
@@ -867,7 +867,7 @@ export const gateways: PaymentGateway[] = [
   { id: "gw-cod", name: "Cash on Delivery", provider: "cod", enabled: false, mode: "test", fees: "0%", transactions30d: 0, volume30d: 0 },
 ];
 
-export const revenueSeries = [
+const legacyRevenueSeries = [
   { day: "Mon", revenue: 4200 },
   { day: "Tue", revenue: 5100 },
   { day: "Wed", revenue: 4800 },
@@ -877,7 +877,7 @@ export const revenueSeries = [
   { day: "Sun", revenue: 6900 },
 ];
 
-export const savedAddresses: SavedAddress[] = [
+const legacySavedAddresses: SavedAddress[] = [
   {
     id: "addr-1",
     label: "Home Address",
@@ -910,6 +910,15 @@ export const savedAddresses: SavedAddress[] = [
     pincode: "411001",
   },
 ];
+
+// Runtime data is supplied by the API. These exports intentionally start empty.
+export const products: Product[] = [];
+export const orders: Order[] = [];
+export const invoices: Invoice[] = [];
+export const shipments: Shipment[] = [];
+export const gateways: PaymentGateway[] = [];
+export const revenueSeries: Array<{ day: string; revenue: number }> = [];
+export const savedAddresses: SavedAddress[] = [];
 
 export const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-IN", {

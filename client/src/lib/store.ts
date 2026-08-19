@@ -1057,24 +1057,24 @@ type State = {
 };
 
 let state: State = {
-  orders: [...seedOrders],
-  invoices: [...seedInvoices],
-  coupons: [...seedCoupons],
-  banners: [...seedBanners],
-  subCategories: [...seedSubCategories],
-  categories: [...seedCategories],
-  navCategories: [...seedNavCategories],
-  roles: [...seedRoles],
-  adminUsers: [...seedAdminUsers],
-  customerProfile: { ...seedCustomerProfile },
-  customerAddresses: [...seedCustomerAddresses],
+  orders: [],
+  invoices: [],
+  coupons: [],
+  banners: [],
+  subCategories: [],
+  categories: [],
+  navCategories: [],
+  roles: [],
+  adminUsers: [],
+  customerProfile: { fullName: "", email: "", phone: "", gender: "", dob: "" },
+  customerAddresses: [],
   companyInvoiceSettings: { ...seedCompanyInvoiceSettings },
   footerConfig: { ...initialFooterConfig },
   headerConfig: { ...initialHeaderConfig },
   faviconConfig: { ...initialFaviconConfig },
   themeConfig: { ...initialThemeConfig },
-  customerTiers: [...seedCustomerTiers],
-  sidebarOptions: [...seedSidebarOptions],
+  customerTiers: [],
+  sidebarOptions: [],
 };
 
 const listeners = new Set<() => void>();
