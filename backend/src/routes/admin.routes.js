@@ -1,11 +1,14 @@
 import { Router } from "express";
+import express from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Product, Coupon, Order, Review, User, Role, Setting, Content, Invoice, PaymentGateway } from "../models/index.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler, fail } from "../utils/api.js";
 import { sendEmail, verifyRazorpayCredentials, createCarrierLabel, trackCarrierShipment } from "../services/providers.js";
+import { uploadR2Image } from "../services/r2.js";
 const router=Router(); router.use(requireAuth,requireRole("admin","support"));
+router.put("/uploads/:folder", express.raw({type:"image/*",limit:"10mb"}),asyncHandler(async(req,res)=>{const image=await uploadR2Image({folder:req.params.folder,fileName:req.headers["x-file-name"],contentType:req.headers["content-type"],body:req.body});res.status(201).json({image});}));
 const csvValue=value=>`"${String(value ?? "").replace(/"/g,'""')}"`;
 function sendCsv(res, filename, headers, rows) { res.type("text/csv").attachment(filename).send([headers.map(csvValue).join(","),...rows.map(row=>row.map(csvValue).join(","))].join("\n")); }
 function invoicePdf(invoice, order) { const esc=v=>String(v??"").replace(/([\\()])/g,"\\$1").replace(/[\r\n]/g," "); const lines=["Metromindz Tax Invoice",`Invoice: ${invoice.invoiceNumber}`,`Order: ${order?.orderNumber||"-"}`,`Customer: ${order?.customer?.fullName||"-"}`,`Issued: ${new Date(invoice.issuedAt).toLocaleDateString("en-IN")}`,`Status: ${invoice.status}`,`Amount: INR ${Number(invoice.amount||0).toFixed(2)}`]; const content=lines.map((line,i)=>`BT /F1 ${i===0?18:11} Tf 50 ${790-i*28} Td (${esc(line)}) Tj ET`).join("\n"); const objects=["<< /Type /Catalog /Pages 2 0 R >>","<< /Type /Pages /Kids [3 0 R] /Count 1 >>","<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",`<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`]; let pdf="%PDF-1.4\n", offsets=[0]; objects.forEach((obj,i)=>{offsets.push(Buffer.byteLength(pdf));pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const start=Buffer.byteLength(pdf);pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n${offsets.slice(1).map(o=>String(o).padStart(10,"0")+" 00000 n ").join("\n")}\ntrailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`; return Buffer.from(pdf); }

@@ -16,6 +16,23 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return data as T;
 }
 
+/** Uploads an admin image directly to the configured Cloudflare R2 folder. */
+export async function uploadImage(folder: "products" | "banners", file: File): Promise<string> {
+  const token = getAccessToken();
+  const response = await fetch(`${API_URL}/admin/uploads/${folder}`, {
+    method: "PUT",
+    headers: {
+      "content-type": file.type || "application/octet-stream",
+      "x-file-name": encodeURIComponent(file.name),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: file,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Image upload failed");
+  return data.image.url as string;
+}
+
 /** Fetches an authenticated file returned by the API and prompts a browser download. */
 export async function downloadApiFile(path: string, fallbackName: string) {
   const token = getAccessToken();

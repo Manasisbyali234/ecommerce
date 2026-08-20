@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ShoppingCart,
   Ticket,
@@ -17,6 +17,7 @@ import {
   Trash2,
   Minus,
   Check,
+  LocateFixed,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
@@ -60,6 +61,8 @@ export default function StorefrontCheckoutPage() {
 
   const [couponCode, setCouponCode] = useState("");
   const [appliedId, setAppliedId] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ place_id: string; description: string }>>([]);
 
   // Selected Address Details
   const activeAddress = useMemo(() => {
@@ -133,6 +136,32 @@ export default function StorefrontCheckoutPage() {
     setCouponCode("");
   };
 
+  const fillAddressFromLocation = () => {
+    if (!navigator.geolocation) { toast.error("Location access is not supported by this browser"); return; }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const result = await api<{ success: boolean; details?: { street?: string; city?: string; state?: string; pincode?: string } }>(`/location/reverse-geocode?lat=${coords.latitude}&lng=${coords.longitude}`);
+        if (!result.success || !result.details) throw new Error("Location details were not found");
+        setIsAddingCustomAddress(true);
+        setCustomAddress((current) => ({ ...current, street: result.details?.street || current.street, city: result.details?.city || current.city, state: result.details?.state || current.state, pincode: result.details?.pincode || current.pincode }));
+        toast.success("Address fields filled from your location");
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to get address from location"); }
+      finally { setIsLocating(false); }
+    }, () => { setIsLocating(false); toast.error("Allow location access to fill your address"); }, { enableHighAccuracy: true, timeout: 10000 });
+  };
+
+  useEffect(() => {
+    if (!isAddingCustomAddress || customAddress.street.trim().length < 3) { setAddressSuggestions([]); return; }
+    const timeout = window.setTimeout(async () => {
+      try {
+        const result = await api<{ predictions?: Array<{ place_id: string; description: string }> }>(`/location/autocomplete?input=${encodeURIComponent(customAddress.street)}`);
+        setAddressSuggestions(result.predictions?.slice(0, 5) || []);
+      } catch { setAddressSuggestions([]); }
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [customAddress.street, isAddingCustomAddress]);
+
   const handlePlaceOrder = async () => {
     if (items.length === 0) {
       toast.error("Your shopping cart is empty");
@@ -158,7 +187,7 @@ export default function StorefrontCheckoutPage() {
         if (!selected) { toast.error("Please choose or add a delivery address"); return; }
         address = selected;
       }
-      const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod: "cod" }) });
+      const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod: "cod", items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })) }) });
       clearCart();
       await hydrateCustomerStore();
       toast.success(`Order ${order.orderNumber} placed successfully!`, { description: "Order synced live to Admin Dashboard" });
@@ -177,7 +206,7 @@ export default function StorefrontCheckoutPage() {
             Customer Checkout
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Review shopping cart items and select your shipping address to complete purchase.
+            Review your cart and shipping address, then place the order. Payment is currently skipped.
           </p>
         </div>
 
@@ -473,6 +502,9 @@ export default function StorefrontCheckoutPage() {
                     <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
                       New Shipping Address Form
                     </h4>
+                    <Button type="button" variant="outline" size="sm" onClick={fillAddressFromLocation} disabled={isLocating} className="gap-1.5 text-xs">
+                      <LocateFixed className="h-3.5 w-3.5" /> {isLocating ? "Finding address..." : "Use my current location"}
+                    </Button>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1 sm:col-span-2">
                         <Label htmlFor="cname" className="text-xs">Full Recipient Name</Label>
@@ -483,7 +515,7 @@ export default function StorefrontCheckoutPage() {
                           onChange={(e) => setCustomAddress({ ...customAddress, name: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1 sm:col-span-2">
+                      <div className="space-y-1 sm:col-span-2 relative">
                         <Label htmlFor="cphone" className="text-xs">Phone Number</Label>
                         <Input
                           id="cphone"
@@ -500,6 +532,15 @@ export default function StorefrontCheckoutPage() {
                           value={customAddress.street}
                           onChange={(e) => setCustomAddress({ ...customAddress, street: e.target.value })}
                         />
+                        {addressSuggestions.length > 0 && (
+                          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-lg">
+                            {addressSuggestions.map((suggestion) => (
+                              <button key={suggestion.place_id} type="button" className="block w-full px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => { setCustomAddress({ ...customAddress, street: suggestion.description }); setAddressSuggestions([]); }}>
+                                {suggestion.description}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor="ccity" className="text-xs">City</Label>
@@ -508,6 +549,15 @@ export default function StorefrontCheckoutPage() {
                           placeholder="Mumbai"
                           value={customAddress.city}
                           onChange={(e) => setCustomAddress({ ...customAddress, city: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="cstate" className="text-xs">State</Label>
+                        <Input
+                          id="cstate"
+                          placeholder="Maharashtra"
+                          value={customAddress.state}
+                          onChange={(e) => setCustomAddress({ ...customAddress, state: e.target.value })}
                         />
                       </div>
                       <div className="space-y-1">

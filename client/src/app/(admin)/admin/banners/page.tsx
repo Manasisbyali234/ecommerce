@@ -71,7 +71,7 @@ import {
   type FontWeightOption,
 } from "@/lib/store";
 import { formatCurrency } from "@/lib/mock-data";
-import { api } from "@/lib/api";
+import { api, uploadImage } from "@/lib/api";
 
 const placementLabel: Record<Placement, string> = {
   top: "Top Announcement Bar",
@@ -230,24 +230,15 @@ export default function AdminBannersPage() {
     setOpen(true);
   };
 
-  // Handle local file upload (Data URL)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Banner assets are stored under banners/ in Cloudflare R2.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size exceeds recommended limit of 5 MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setDraft((prev) => ({ ...prev, imageUrl: event.target!.result as string }));
-        toast.success(`Uploaded image "${file.name}"`);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const imageUrl = await uploadImage("banners", file);
+      setDraft((prev) => ({ ...prev, imageUrl }));
+      toast.success(`Uploaded "${file.name}" to Cloudflare R2`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to upload banner image"); }
   };
 
   const saveBanner = async () => {
@@ -299,23 +290,13 @@ export default function AdminBannersPage() {
     }
   };
 
-  const handleQuickFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuickFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size exceeds recommended limit of 5 MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setQuickImageUrl(event.target.result as string);
-        toast.success(`Loaded image "${file.name}"`);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setQuickImageUrl(await uploadImage("banners", file));
+      toast.success(`Uploaded "${file.name}" to Cloudflare R2`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to upload banner image"); }
   };
 
   return (
@@ -934,17 +915,16 @@ export default function AdminBannersPage() {
                                   type="file"
                                   accept="image/*"
                                   className="absolute inset-0 opacity-0 cursor-pointer"
-                                  onChange={(e) => {
+                                  onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (ev) => {
+                                      try {
+                                        const imageUrl = await uploadImage("banners", file);
                                         const items = [...(draft.collageItems || [])];
-                                        items[cIdx].imageUrl = ev.target?.result as string;
+                                        items[cIdx].imageUrl = imageUrl;
                                         setDraft({ ...draft, collageItems: items });
-                                        toast.success("Image uploaded!");
-                                      };
-                                      reader.readAsDataURL(file);
+                                        toast.success("Image uploaded to Cloudflare R2!");
+                                      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to upload banner image"); }
                                     }
                                   }}
                                 />

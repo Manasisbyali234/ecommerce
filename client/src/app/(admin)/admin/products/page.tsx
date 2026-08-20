@@ -85,7 +85,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { products as seed, formatCurrency, defaultAdditionalInfo, type Product, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
-import { api } from "@/lib/api";
+import { api, uploadImage } from "@/lib/api";
 
 const defaultAboutSections: AboutProductSection[] = [
   {
@@ -603,30 +603,19 @@ export default function ProductsPage() {
     }));
   };
 
-  // Local File Upload Handler
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isCover = false) => {
+  // Upload product images to Cloudflare R2 instead of saving base64 image data in MongoDB.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover = false) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    const readPromises = fileList.map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          resolve(evt.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(readPromises).then((urls) => {
+    try {
+      const urls = await Promise.all(Array.from(files).map((file) => uploadImage("products", file)));
       if (isCover) {
         setFormData((prev) => ({
           ...prev,
           image: urls[0],
           images: prev.images ? [urls[0], ...prev.images.filter((u) => u !== prev.image)] : [urls[0]],
         }));
-        toast.success("Primary cover image uploaded from device!");
+        toast.success("Primary cover image uploaded to Cloudflare R2!");
       } else {
         const current = formData.images || [];
         const updated = [...current, ...urls];
@@ -635,9 +624,9 @@ export default function ProductsPage() {
           images: updated,
           image: prev.image || urls[0],
         }));
-        toast.success(`Uploaded ${urls.length} photo(s) to product gallery!`);
+        toast.success(`Uploaded ${urls.length} product image(s) to Cloudflare R2!`);
       }
-    });
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to upload product images"); }
   };
 
   // Add Spec Key-Value
