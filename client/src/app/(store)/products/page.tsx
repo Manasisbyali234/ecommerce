@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { formatCurrency, type Product } from "@/lib/mock-data";
 import { useProducts } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart-context";
+import { useWishlist } from "@/lib/wishlist-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -99,6 +100,7 @@ function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addItem } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
@@ -791,6 +793,7 @@ function ProductsContent() {
                   const mrp = product.originalPrice || Math.round(product.price * 1.28);
                   const discountPercent = Math.round(((mrp - product.price) / mrp) * 100);
                   const brand = getBrandName(product);
+                  const isWishlisted = isInWishlist(product.id);
 
                   return (
                     <div
@@ -809,15 +812,21 @@ function ProductsContent() {
 
                         {/* Top Right Wishlist Button */}
                         <button
-                          onClick={() => {
-                            toast.success("Added to Wishlist", {
-                              description: `${product.name} saved to your favorites`,
-                            });
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleWishlist(product.id, product.name);
                           }}
-                          className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-rose-500 transition-colors shadow-xs"
-                          title="Add to Wishlist"
+                          className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center transition-colors shadow-xs ${
+                            isWishlisted
+                              ? "bg-rose-500 text-white hover:bg-rose-600"
+                              : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-rose-500"
+                          }`}
+                          title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                          aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
                         >
-                          <Heart className="h-4 w-4" />
+                          <Heart className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`} />
                         </button>
 
                         {/* Top Left AD / Category Tag */}

@@ -204,11 +204,13 @@ export default function ProductDetailPage({ params }: PageProps) {
   const product: Product =
     products.find((p) => p.id === resolvedParams.id) || products[0] || loadingProduct;
 
-  const galleryImages = product.images && product.images.length > 0
+  const galleryImages = (product.images && product.images.length > 0
     ? product.images
-    : [product.image];
+    : [product.image]
+  ).filter((image): image is string => typeof image === "string" && image.trim().length > 0);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const activeImage = galleryImages[activeImageIndex] ?? null;
   const [selectedColor, setSelectedColor] = useState(
     product.colors && product.colors.length > 0 ? product.colors[0].name : ""
   );
@@ -217,6 +219,13 @@ export default function ProductDetailPage({ params }: PageProps) {
   );
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"features" | "specs" | "reviews">("features");
+
+  const showReviews = () => {
+    setActiveTab("reviews");
+    requestAnimationFrame(() => {
+      document.getElementById("customer-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   // Lightbox Zoom Modal & Visual Showcase Slider States
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -575,24 +584,34 @@ export default function ProductDetailPage({ params }: PageProps) {
               {/* Primary High-Res Preview (Click to Open Lightbox Zoom Modal) */}
               <div
                 onClick={() => {
+                  if (!activeImage) return;
                   setLightboxIndex(activeImageIndex);
                   setZoomLevel(1);
                   setLightboxOpen(true);
                 }}
-                className="relative overflow-hidden rounded-2xl border bg-slate-950 aspect-square flex items-center justify-center group cursor-zoom-in shadow-sm w-full"
+                className={`relative overflow-hidden rounded-2xl border bg-slate-950 aspect-square flex items-center justify-center group shadow-sm w-full ${
+                  activeImage ? "cursor-zoom-in" : "cursor-default"
+                }`}
               >
-                <img
-                  src={galleryImages[activeImageIndex]}
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {activeImage ? (
+                  <img
+                    src={activeImage}
+                    alt={product.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <ImageIconLucide className="h-10 w-10" />
+                    <span className="text-xs font-medium">Image unavailable</span>
+                  </div>
+                )}
 
                 {/* Click to Zoom Hover Overlay Badge */}
-                <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                {activeImage && <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                   <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/80 text-white text-xs font-bold backdrop-blur-md shadow-lg border border-white/20">
                     <ZoomIn className="h-4 w-4 text-amber-400" /> Click to Zoom
                   </span>
-                </div>
+                </div>}
 
                 {product.stock > 0 && product.stock <= 15 && (
                   <Badge className="absolute top-4 left-4 bg-amber-500 text-white font-bold text-xs">
@@ -703,7 +722,12 @@ export default function ProductDetailPage({ params }: PageProps) {
             </h1>
 
             {/* Rating Stars & Review Count */}
-            <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={showReviews}
+              className="flex items-center gap-2 pt-1 rounded-sm text-left hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label={`View ${reviewsList.length} customer reviews`}
+            >
               <div className="flex items-center text-amber-400">
                 {[...Array(5)].map((_, i) => (
                   <Star
@@ -722,7 +746,7 @@ export default function ProductDetailPage({ params }: PageProps) {
               <span className="text-xs text-muted-foreground">
                 ({reviewsList.length} customer reviews)
               </span>
-            </div>
+            </button>
           </div>
 
           {/* Prominent Price & Discount Display */}
@@ -947,7 +971,7 @@ export default function ProductDetailPage({ params }: PageProps) {
       </div>
 
       {/* Middle Tabbed Specifications & Customer Reviews */}
-      <div className="space-y-6 pt-6 border-t">
+      <div id="customer-reviews" className="space-y-6 pt-6 border-t scroll-mt-24">
         <div className="flex items-center gap-4 border-b pb-3">
           <button
             onClick={() => setActiveTab("features")}
