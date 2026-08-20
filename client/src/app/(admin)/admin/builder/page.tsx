@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   GripVertical,
@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api";
 
 // Section Definition Type focusing on Position, Layout & Grid Space Arrangement
 export type PageSection = {
@@ -124,6 +125,7 @@ const initialHomeSections: PageSection[] = [
 export default function WireframeLayoutBuilder() {
   const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [sections, setSections] = useState<PageSection[]>(initialHomeSections);
+  useEffect(() => { api<{ setting: { value: { sections?: PageSection[] } } }>("/admin/settings/page-builder").then(({ setting }) => { if (setting.value.sections) setSections(setting.value.sections); }).catch(() => undefined); }, []);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec-1");
 
   // Drag and Drop States
@@ -282,10 +284,10 @@ export default function WireframeLayoutBuilder() {
   };
 
   // Save Layout Config
-  const saveLayout = () => {
-    toast.success("Wireframe Layout Structure Saved Successfully!", {
+  const saveLayout = async () => {
+    try { await api("/admin/settings/page-builder", { method: "PUT", body: JSON.stringify({ sections }) }); toast.success("Wireframe Layout Structure Saved Successfully!", {
       description: "Section positions and grid space arrangements are stored.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save layout"); }
   };
 
   // Get responsive width container class for viewport simulation

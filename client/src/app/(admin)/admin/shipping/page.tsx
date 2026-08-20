@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   Truck,
@@ -63,6 +63,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { type Shipment } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 const extendedShipments: Shipment[] = [
   { id: "SHP-88112", orderId: "#ORD-1092", customer: "Aakash Sharma", carrier: "Delhivery", tracking: "DEL8891230491", status: "in_transit", destination: "Bengaluru, KA", eta: "2026-07-28" },
@@ -92,7 +93,7 @@ const statusLabel: Record<Shipment["status"], string> = {
 };
 
 export default function ShippingPage() {
-  const [shipmentsList, setShipmentsList] = useState<Shipment[]>(extendedShipments);
+  const [shipmentsList, setShipmentsList] = useState<Shipment[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [carrier, setCarrier] = useState("all");
@@ -125,10 +126,15 @@ export default function ShippingPage() {
   const [expressCutoff, setExpressCutoff] = useState("14:00");
   const [expressNote, setExpressNote] = useState("Next-day delivery before 12 PM for orders placed before the cutoff time.");
 
-  const handleSaveCharges = () => {
-    toast.success("Shipping Charges Saved!", {
+  useEffect(() => {
+    api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then(({ items }) => setShipmentsList(items.filter((order) => order.shipment).map((order) => { const shipment = order.shipment as Record<string, unknown>; const customer = order.customer as Record<string, string>; return { id: String(order.id), orderId: String(order.orderNumber || order.id), customer: customer?.fullName || "Customer", carrier: String(shipment.carrier || ""), tracking: String(shipment.tracking || ""), status: shipment.status as Shipment["status"], destination: String((order.shippingAddress as Record<string, string>)?.city || ""), eta: String(shipment.eta || "").slice(0, 10) }; }))).catch(() => toast.error("Unable to load shipment records"));
+    api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/shipping").then(({ setting }) => { const v = setting.value; setHandlingEnabled(v.handlingEnabled !== false); setHandlingType(v.handlingType === "percent" ? "percent" : "flat"); setHandlingAmount(String(v.handlingAmount || handlingAmount)); setMarketplaceEnabled(v.marketplaceEnabled !== false); setMarketplaceFeeType(v.marketplaceFeeType === "flat" ? "flat" : "percent"); setMarketplaceFeeAmount(String(v.marketplaceFeeAmount || marketplaceFeeAmount)); setExpressEnabled(v.expressEnabled !== false); setExpressAmount(String(v.expressAmount || expressAmount)); setExpressCutoff(String(v.expressCutoff || expressCutoff)); }).catch(() => undefined);
+  }, []);
+
+  const handleSaveCharges = async () => {
+    try { await api("/admin/settings/shipping", { method: "PUT", body: JSON.stringify({ handlingEnabled, handlingType, handlingAmount, handlingNote, marketplaceEnabled, marketplaceFeeType, marketplaceFeeAmount, marketplaceNote, expressEnabled, expressAmount, expressCutoff, expressNote }) }); toast.success("Shipping Charges Saved!", {
       description: "Handling, Marketplace, and Express delivery charges have been updated.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save shipping settings"); }
   };
 
   const filtered = useMemo(
@@ -159,36 +165,30 @@ export default function ShippingPage() {
     toast.success(`Copied Tracking No: ${tracking}`);
   };
 
-  const handleCreateLabel = () => {
+  const handleCreateLabel = async () => {
     if (!newOrderId || !newCustomer) {
       toast.error("Order ID and Customer Name are required");
       return;
     }
-    const newShp: Shipment = {
-      id: `SHP-${Math.floor(10000 + Math.random() * 90000)}`,
-      orderId: newOrderId.startsWith("#") ? newOrderId : `#${newOrderId}`,
-      customer: newCustomer,
-      carrier: newCarrier,
-      tracking: newTracking || `DEL${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-      status: "label_created",
-      destination: newDestination || "India",
-      eta: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    };
-
-    setShipmentsList((prev) => [newShp, ...prev]);
+    const matching = await api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then(({ items }) => items.find((order) => String(order.orderNumber || order.id) === newOrderId || String(order.id) === newOrderId));
+    if (!matching) { toast.error("Order was not found in MongoDB"); return; }
+    try { const result = await api<{ order: Record<string, unknown> }>(`/admin/orders/${matching.id}/shipment/label`, { method: "POST" }); const shipment = result.order.shipment as Record<string, unknown>; const newShp: Shipment = { id: String(result.order.id), orderId: String(result.order.orderNumber || newOrderId), customer: String((result.order.customer as Record<string, unknown>)?.fullName || newCustomer), carrier: String(shipment.carrier || newCarrier), tracking: String(shipment.tracking || newTracking), status: "label_created", destination: newDestination || "India", eta: shipment.eta ? String(shipment.eta).slice(0, 10) : "" }; setShipmentsList((prev) => [newShp, ...prev]);
     setOpenNewDialog(false);
     setNewOrderId("");
     setNewCustomer("");
     setNewTracking("");
     setNewDestination("");
-    toast.success(`Shipping label ${newShp.id} generated!`);
+    toast.success("Carrier label generated!"); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create carrier label"); }
   };
 
-  const handleUpdateStatus = (id: string, newStatus: Shipment["status"]) => {
+  const handleUpdateStatus = async (id: string, newStatus: Shipment["status"]) => {
+    const shipment = shipmentsList.find((item) => item.id === id); if (!shipment) return;
+    try { await api(`/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify({ shipment: { carrier: shipment.carrier, tracking: shipment.tracking, status: newStatus, eta: shipment.eta } }) });
     setShipmentsList((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
     );
     toast.success(`Shipment ${id} status updated to ${statusLabel[newStatus].toUpperCase()}`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update shipment"); }
   };
 
   const exportShipmentsCsv = () => {

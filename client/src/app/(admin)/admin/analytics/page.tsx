@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { products, revenueSeries, formatCurrency, type Order } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { api } from "@/lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b",
@@ -82,8 +83,11 @@ const topRegionsData = [
 
 export default function AnalyticsPage() {
   const orders = useStore((s) => s.orders);
+  const [analytics, setAnalytics] = useState<{ revenue: number; averageOrderValue: number; orderCount: number; newCustomers: number; topProducts: Array<{ name: string; revenue: number }> } | null>(null);
   const [timeRange, setTimeRange] = useState("7d");
   const [channelFilter, setChannelFilter] = useState("all");
+
+  useEffect(() => { api<{ revenue: number; averageOrderValue: number; orderCount: number; newCustomers: number; topProducts: Array<{ name: string; revenue: number }> }>("/admin/analytics").then(setAnalytics).catch(() => toast.error("Unable to load analytics")); }, []);
 
   const revenueByDay = revenueSeries;
 
@@ -97,7 +101,7 @@ export default function AnalyticsPage() {
     }));
   }, [orders]);
 
-  const topProducts = useMemo(() => {
+  const calculatedTopProducts = useMemo(() => {
     const active = products.filter((p) => p.status === "active");
     const revenue = new Map<string, number>();
     orders.forEach((o, oi) => {
@@ -113,11 +117,12 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
   }, [orders]);
+  const topProducts = analytics?.topProducts.map((product) => ({ name: product.name, value: product.revenue })) || calculatedTopProducts;
 
   const kpis = {
-    revenue: revenueSeries.reduce((a, b) => a + b.revenue, 0) + orders.reduce((a, b) => a + b.total, 0),
-    orders: orders.length,
-    aov: orders.length > 0 ? orders.reduce((a, b) => a + b.total, 0) / orders.length : 0,
+    revenue: analytics?.revenue ?? (revenueSeries.reduce((a, b) => a + b.revenue, 0) + orders.reduce((a, b) => a + b.total, 0)),
+    orders: analytics?.orderCount ?? orders.length,
+    aov: analytics?.averageOrderValue ?? (orders.length > 0 ? orders.reduce((a, b) => a + b.total, 0) / orders.length : 0),
     conversion: 3.84,
     abandonment: 24.2,
     clv: 8450,

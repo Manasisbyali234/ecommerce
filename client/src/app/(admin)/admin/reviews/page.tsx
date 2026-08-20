@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Star,
@@ -47,6 +47,7 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 import { products, type ProductReview } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 interface AdminReviewItem extends ProductReview {
   productId: string;
@@ -151,11 +152,13 @@ const initialAdminReviews: AdminReviewItem[] = [
 ];
 
 export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<AdminReviewItem[]>(initialAdminReviews);
+  const [reviews, setReviews] = useState<AdminReviewItem[]>([]);
   const [statusTab, setStatusTab] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [reviewMediaModal, setReviewMediaModal] = useState<{ type: "image" | "video"; url: string; title?: string } | null>(null);
+
+  useEffect(() => { api<{ items: Array<Record<string, unknown>> }>("/admin/reviews").then(({ items }) => setReviews(items.map((review) => { const product = review.product as Record<string, string> | undefined; return { id: String(review.id), productId: String(product?.id || ""), productName: product?.name || "Product", productImage: product?.image || "", author: String(review.author), rating: Number(review.rating), title: String(review.title || ""), comment: String(review.comment), images: review.images as string[] | undefined, videoUrl: review.videoUrl as string | undefined, status: review.status as AdminReviewItem["status"], date: new Date(String(review.createdAt)).toLocaleDateString("en-IN") }; }))).catch(() => toast.error("Unable to load reviews")); }, []);
 
   // Filtered Reviews
   const filtered = useMemo(() => {
@@ -177,18 +180,22 @@ export default function AdminReviewsPage() {
   const approvedCount = reviews.filter((r) => r.status === "approved").length;
   const rejectedCount = reviews.filter((r) => r.status === "rejected").length;
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
+    try { await api(`/admin/reviews/${id}`, { method: "PATCH", body: JSON.stringify({ status: "approved" }) });
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r))
     );
     toast.success("Review approved & published to storefront!");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to approve review"); }
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
+    try { await api(`/admin/reviews/${id}`, { method: "PATCH", body: JSON.stringify({ status: "rejected" }) });
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "rejected" as const } : r))
     );
     toast.info("Review marked as rejected");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to reject review"); }
   };
 
   return (

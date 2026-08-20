@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Users,
   ShieldCheck,
@@ -34,6 +34,7 @@ import {
   Key,
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 import {
   useStore,
@@ -99,6 +100,15 @@ export default function AdminUsersPage() {
   const [roleDesc, setRoleDesc] = useState("");
   const [rolePerms, setRolePerms] = useState<ModulePermissions>(createFullPermissions());
 
+  useEffect(() => {
+    Promise.all([api<{ items: Array<Record<string, unknown>> }>("/admin/users"), api<{ items: Array<Record<string, unknown>> }>("/admin/roles")]).then(([userResult, roleResult]) => {
+      const loadedRoles: Role[] = roleResult.items.map((role) => ({ id: String(role.id), name: String(role.name), description: String(role.description || ""), isSuperAdmin: Boolean(role.isSuperAdmin), permissions: createFullPermissions() }));
+      const fallbackRole = loadedRoles.find((role) => role.name.toLowerCase().includes("admin"))?.id || "admin";
+      store.replaceRoles(loadedRoles);
+      store.replaceAdminUsers(userResult.items.map((user) => ({ id: String(user.id), name: String(user.fullName || ""), email: String(user.email || ""), roleId: String(user.role || fallbackRole), status: user.status === "disabled" ? "inactive" : "active", lastLogin: String(user.updatedAt || "Never") })));
+    }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load administrator data"));
+  }, []);
+
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
     const q = searchQuery.toLowerCase();
@@ -150,7 +160,7 @@ export default function AdminUsersPage() {
     setUserModalOpen(true);
   };
 
-  const saveUser = () => {
+  const saveUser = async () => {
     if (!userDraft.name.trim() || !userDraft.email.trim()) {
       toast.error("User Name and Email are required");
       return;
@@ -161,10 +171,13 @@ export default function AdminUsersPage() {
       return;
     }
 
+    try {
     if (editingUserId) {
+      await api(`/admin/users/${editingUserId}`, { method: "PATCH", body: JSON.stringify({ fullName: userDraft.name, status: userDraft.status === "active" ? "active" : "disabled", role: userDraft.roleId === "support" ? "support" : "admin" }) });
       store.updateAdminUser(editingUserId, userDraft);
       toast.success(`User "${userDraft.name}" updated successfully!`);
     } else {
+      await api("/admin/users", { method: "POST", body: JSON.stringify({ fullName: userDraft.name, email: userDraft.email, password: crypto.randomUUID(), role: userDraft.roleId === "support" ? "support" : "admin" }) });
       store.addAdminUser(userDraft);
       toast.success(`User "${userDraft.name}" added live to team!`, {
         description: sendInviteEmail ? `Welcome email sent to ${userDraft.email}` : "Account ready.",
@@ -173,15 +186,17 @@ export default function AdminUsersPage() {
 
     setUserModalOpen(false);
     setEditingUserId(null);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save administrator"); }
   };
 
-  const removeUser = (id: string) => {
+  const removeUser = async (id: string) => {
     const u = users.find((x) => x.id === id);
     if (u?.email === "superadmin@metromindz.com") {
       toast.error("Cannot delete master Super Admin account!");
       return;
     }
-    store.removeAdminUser(id);
+    try { await api(`/admin/users/${id}`, { method: "DELETE" }); store.removeAdminUser(id); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete administrator"); return; }
     toast.success(`User "${u?.name}" removed`);
   };
 
@@ -313,7 +328,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const saveRole = () => {
+  const saveRole = async () => {
     if (!roleName.trim()) {
       toast.error("Role Name is required");
       return;
@@ -325,19 +340,23 @@ export default function AdminUsersPage() {
       permissions: rolePerms,
     };
 
+    try { const permissions = Object.entries(rolePerms).flatMap(([module, grants]) => Object.entries(grants).filter(([, allowed]) => allowed).map(([action]) => `${module}:${action}`));
     if (editingRoleId) {
+      await api(`/admin/roles/${editingRoleId}`, { method: "PATCH", body: JSON.stringify({ name: payload.name, description: payload.description, permissions }) });
       store.updateRole(editingRoleId, payload);
       toast.success(`Role "${roleName}" updated live!`);
     } else {
+      await api("/admin/roles", { method: "POST", body: JSON.stringify({ name: payload.name, description: payload.description, permissions }) });
       store.addRole(payload);
       toast.success(`New Role "${roleName}" created!`);
     }
 
     setRoleModalOpen(false);
     setEditingRoleId(null);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save role"); }
   };
 
-  const removeRole = (id: string) => {
+  const removeRole = async (id: string) => {
     const role = roles.find((r) => r.id === id);
     if (role?.isSuperAdmin) {
       toast.error("Cannot delete master Super Admin role");
@@ -348,7 +367,8 @@ export default function AdminUsersPage() {
       toast.error(`Cannot delete role: ${assignedCount} user(s) currently assigned`);
       return;
     }
-    store.removeRole(id);
+    try { await api(`/admin/roles/${id}`, { method: "DELETE" }); store.removeRole(id); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete role"); return; }
     toast.success(`Role "${role?.name}" removed`);
   };
 

@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import { formatCurrency, defaultAboutSections, defaultAdditionalInfo, type Product, type ProductReview, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
 import { useProducts } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart-context";
+import { api } from "@/lib/api";
 import { useWishlist } from "@/lib/wishlist-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,6 +177,22 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const loadingProduct: Product = {
+  id: "loading",
+  name: "Loading product…",
+  sku: "",
+  category: "",
+  price: 0,
+  stock: 0,
+  status: "draft",
+  image: "",
+  images: [],
+  features: [],
+  specs: {},
+  colors: [],
+  sizes: [],
+};
+
 export default function ProductDetailPage({ params }: PageProps) {
   const products = useProducts();
   const resolvedParams = use(params);
@@ -185,7 +202,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
   // Find product by ID
   const product: Product =
-    products.find((p) => p.id === resolvedParams.id) || products[0];
+    products.find((p) => p.id === resolvedParams.id) || products[0] || loadingProduct;
 
   const galleryImages = product.images && product.images.length > 0
     ? product.images
@@ -325,13 +342,25 @@ export default function ProductDetailPage({ params }: PageProps) {
     }
   };
 
-  const handleAddReviewSubmit = (e: React.FormEvent) => {
+  const handleAddReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReview.author.trim() || !newReview.comment.trim()) {
       toast.error("Please fill in your name and review details");
       return;
     }
-    const created: ProductReview = {
+    try {
+      const { review } = await api<{ review: ProductReview }>(`/products/${product.id}/reviews`, { method: "POST", body: JSON.stringify({ rating: newReview.rating, title: newReview.title || undefined, comment: newReview.comment, images: newReview.photos.filter((url) => /^https?:\/\//.test(url)), videoUrl: newReview.videoUrl && /^https?:\/\//.test(newReview.videoUrl) ? newReview.videoUrl : undefined }) });
+      const created: ProductReview = {
+        ...review,
+        date: "Just now",
+        images: review.images?.length ? review.images : undefined,
+      };
+      setReviewsList((prev) => [created, ...prev]);
+      setOpenAddReviewModal(false);
+      setNewReview({ author: "", rating: 5, title: "", comment: "", photos: [], videoUrl: null });
+      toast.success("Thank you! Your review was submitted for approval.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Please sign in before submitting a review"); }
+    /* const created: ProductReview = {
       id: `rev-${Date.now()}`,
       author: newReview.author,
       avatarUrl: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150`,
@@ -349,7 +378,7 @@ export default function ProductDetailPage({ params }: PageProps) {
     setReviewsList((prev) => [created, ...prev]);
     setOpenAddReviewModal(false);
     setNewReview({ author: "", rating: 5, title: "", comment: "", photos: [], videoUrl: null });
-    toast.success("Thank you! Your customer review with media has been published.");
+    toast.success("Thank you! Your customer review with media has been published."); */
   };
 
   // Pincode Delivery Availability & Estimated Delivery State
@@ -379,7 +408,7 @@ export default function ProductDetailPage({ params }: PageProps) {
     };
   }, []);
 
-  const handleCheckPincode = (e?: React.FormEvent) => {
+  const handleCheckPincode = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = pincode.trim().replace(/\D/g, "");
     if (clean.length !== 6) {
@@ -391,13 +420,15 @@ export default function ProductDetailPage({ params }: PageProps) {
     setPincodeError("");
     setIsCheckingPincode(true);
 
-    setTimeout(() => {
+    try {
+      const result = await api<{ available: boolean; estimatedDays?: string; message?: string }>("/shipping/check", { method: "POST", body: JSON.stringify({ pincode: clean }) });
       setIsCheckingPincode(false);
+      if (!result.available) { setPincodeError(result.message || "Delivery is unavailable for this pincode"); setCheckedPincode(null); return; }
       setCheckedPincode(clean);
       toast.success(`Delivery available for Pincode ${clean}!`, {
-        description: `Standard Delivery by ${deliveryEstimates.standard}`,
+        description: `Estimated delivery: ${result.estimatedDays || deliveryEstimates.standard} days`,
       });
-    }, 300);
+    } catch (error) { setIsCheckingPincode(false); setPincodeError(error instanceof Error ? error.message : "Unable to check delivery availability"); }
   };
 
   const handleAddToCart = () => {

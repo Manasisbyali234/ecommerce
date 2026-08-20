@@ -20,14 +20,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
-import { useStore, store, type Coupon } from "@/lib/store";
+import { useStore, store, hydrateCustomerStore, type Coupon, type CustomerAddress } from "@/lib/store";
 import { evaluateCoupon, type CartLine } from "@/lib/coupons";
 import { api, getAccessToken } from "@/lib/api";
 import {
   formatCurrency,
-  savedAddresses,
-  type SavedAddress,
-  type Order,
 } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,13 +39,14 @@ const TAX_RATE = 0.08;
 export default function StorefrontCheckoutPage() {
   const { items, subtotal, updateQuantity, removeItem, clearCart } = useCart();
   const coupons = useStore((s) => s.coupons);
+  const savedAddresses = useStore((s) => s.customerAddresses).map((address) => ({ ...address, name: address.fullName, label: address.type }));
   const router = useRouter();
 
   // Wizard Step State (1: Cart Details, 2: Shipping Address)
   const [step, setStep] = useState<1 | 2>(1);
 
   // Address Selection State
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("addr-1");
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isAddingCustomAddress, setIsAddingCustomAddress] = useState(false);
 
   const [customAddress, setCustomAddress] = useState({
@@ -67,7 +65,7 @@ export default function StorefrontCheckoutPage() {
   const activeAddress = useMemo(() => {
     if (isAddingCustomAddress) {
       return {
-        name: customAddress.name || "Customer",
+        fullName: customAddress.name || "Customer",
         street: customAddress.street,
         city: customAddress.city,
         pincode: customAddress.pincode,
@@ -75,7 +73,7 @@ export default function StorefrontCheckoutPage() {
       };
     }
     const found = savedAddresses.find((a) => a.id === selectedAddressId);
-    return found || savedAddresses[0];
+    return found || savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
   }, [selectedAddressId, isAddingCustomAddress, customAddress]);
 
   // Convert cart items to CartLine format for coupon evaluation
@@ -142,7 +140,7 @@ export default function StorefrontCheckoutPage() {
     }
 
     if (isAddingCustomAddress) {
-      if (!customAddress.name.trim() || !customAddress.street.trim() || !customAddress.city.trim()) {
+      if (!customAddress.name.trim() || !customAddress.phone.trim() || !customAddress.street.trim() || !customAddress.city.trim() || !customAddress.state.trim() || !/^\d{6}$/.test(customAddress.pincode)) {
         toast.error("Please complete all required fields for the new address");
         return;
       }
@@ -150,11 +148,19 @@ export default function StorefrontCheckoutPage() {
 
     if (!getAccessToken()) { toast.error("Please sign in before placing an order"); return; }
     try {
-      const address = isAddingCustomAddress
-        ? { ...customAddress, type: "Home", isDefault: false }
-        : { fullName: activeAddress.name, phone: savedAddresses.find((item) => item.id === selectedAddressId)?.phone || "0000000000", street: activeAddress.street, city: activeAddress.city, state: activeAddress.state, pincode: activeAddress.pincode, type: "Home", isDefault: false };
+      let address: CustomerAddress | Omit<CustomerAddress, "id">;
+      if (isAddingCustomAddress) {
+        address = { fullName: customAddress.name, phone: customAddress.phone, street: customAddress.street, city: customAddress.city, state: customAddress.state, pincode: customAddress.pincode, type: "Home", isDefault: savedAddresses.length === 0 };
+        const saved = await api<{ addresses: CustomerAddress[] }>("/me/addresses", { method: "POST", body: JSON.stringify(address) });
+        address = saved.addresses.find((item) => item.isDefault) || saved.addresses[saved.addresses.length - 1] || address;
+      } else {
+        const selected = savedAddresses.find((item) => item.id === selectedAddressId) || savedAddresses.find((item) => item.isDefault);
+        if (!selected) { toast.error("Please choose or add a delivery address"); return; }
+        address = selected;
+      }
       const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod: "cod" }) });
       clearCart();
+      await hydrateCustomerStore();
       toast.success(`Order ${order.orderNumber} placed successfully!`, { description: "Order synced live to Admin Dashboard" });
       router.push(`/order-success?orderId=${encodeURIComponent(order.orderNumber || order.id)}`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to place order"); }
@@ -418,7 +424,7 @@ export default function StorefrontCheckoutPage() {
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm text-foreground">
-                                  {addr.label}
+                                  {addr.type}
                                 </span>
                                 {addr.isDefault && (
                                   <Badge className="bg-primary/10 text-primary text-[10px]">

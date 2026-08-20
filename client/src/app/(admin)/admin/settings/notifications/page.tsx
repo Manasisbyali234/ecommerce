@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Mail,
@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -335,6 +336,7 @@ export default function NotificationSettingsPage() {
   const [replyTo, setReplyTo] = useState("support@metromindz.com");
 
   const [templates, setTemplates] = useState(defaultTemplates);
+  useEffect(() => { api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/notifications").then(({ setting }) => { const v = setting.value; setGlobalEmailEnabled(v.globalEmailEnabled !== false); setSenderName(String(v.senderName || senderName)); setSenderEmail(String(v.senderEmail || senderEmail)); setReplyTo(String(v.replyTo || replyTo)); if (v.templates) setTemplates(v.templates as typeof defaultTemplates); }).catch(() => undefined); }, []);
 
   const patchTemplate = (key: keyof typeof templates, patch: Partial<EmailTemplate>) => {
     setTemplates((prev) => ({
@@ -343,10 +345,10 @@ export default function NotificationSettingsPage() {
     }));
   };
 
-  const handleSave = () => {
-    toast.success("Email Notification Templates Saved!", {
+  const handleSave = async () => {
+    try { await api("/admin/settings/notifications", { method: "PUT", body: JSON.stringify({ globalEmailEnabled, senderName, senderEmail, replyTo, templates }) }); toast.success("Email Notification Templates Saved!", {
       description: "All 3 templates have been updated and will apply to future order emails.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save notification templates"); }
   };
 
   const activeCount = Object.values(templates).filter((t) => t.enabled).length;

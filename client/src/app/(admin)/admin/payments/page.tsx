@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { formatCurrency, type PaymentGateway } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 export type ExtendedGateway = PaymentGateway & {
   publishableKey?: string;
@@ -127,7 +128,9 @@ const providerIcons: Record<string, typeof CreditCard> = {
 };
 
 export default function PaymentsPage() {
-  const [gateways, setGateways] = useState<ExtendedGateway[]>(initialGateways);
+  const [gateways, setGateways] = useState<ExtendedGateway[]>([]);
+
+  useEffect(() => { api<{ items: Array<Record<string, unknown>> }>("/admin/payment-gateways").then(({ items }) => setGateways(items.map((gateway) => ({ id: String(gateway.id), name: String(gateway.name), provider: String(gateway.provider), enabled: Boolean(gateway.enabled), mode: gateway.mode === "live" ? "live" : "test", fees: String(gateway.fees || ""), transactions30d: 0, volume30d: 0, ...(gateway.config as Record<string, string> || {}) })))).catch(() => toast.error("Unable to load payment gateways")); }, []);
 
   // Selected Gateway Modal state
   const [selectedGateway, setSelectedGateway] = useState<ExtendedGateway | null>(null);
@@ -146,7 +149,9 @@ export default function PaymentsPage() {
   const [testingPing, setTestingPing] = useState(false);
 
   // Toggle Enable/Disable
-  const toggleEnable = (id: string) => {
+  const toggleEnable = async (id: string) => {
+    const gateway = gateways.find((item) => item.id === id); if (!gateway) return;
+    try { await api(`/admin/payment-gateways/${id}`, { method: "PATCH", body: JSON.stringify({ enabled: !gateway.enabled }) });
     setGateways((prev) =>
       prev.map((g) => {
         if (g.id === id) {
@@ -157,14 +162,17 @@ export default function PaymentsPage() {
         return g;
       })
     );
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update gateway"); }
   };
 
   // Toggle Mode (Live vs Test)
-  const setMode = (id: string, mode: "live" | "test") => {
+  const setMode = async (id: string, mode: "live" | "test") => {
+    try { await api(`/admin/payment-gateways/${id}`, { method: "PATCH", body: JSON.stringify({ mode }) });
     setGateways((prev) =>
       prev.map((g) => (g.id === id ? { ...g, mode } : g))
     );
     toast.success(`Switched gateway to ${mode.toUpperCase()} mode`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update gateway"); }
   };
 
   // Open Configure Keys Modal
@@ -182,10 +190,10 @@ export default function PaymentsPage() {
   };
 
   // Save Gateway Credentials
-  const handleSaveKeys = () => {
+  const handleSaveKeys = async () => {
     if (!selectedGateway) return;
 
-    setGateways((prev) =>
+    try { await api(`/admin/payment-gateways/${selectedGateway.id}`, { method: "PATCH", body: JSON.stringify({ mode: keysForm.mode, config: keysForm }) }); setGateways((prev) =>
       prev.map((g) =>
         g.id === selectedGateway.id
           ? {
@@ -203,17 +211,16 @@ export default function PaymentsPage() {
     setOpenModal(false);
     toast.success(`API Credentials Saved for ${selectedGateway.name}`, {
       description: "Encrypted 256-bit SSL keys updated live.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save gateway credentials"); }
   };
 
   // Ping API Credentials Test
   const handleTestConnection = async () => {
+    if (!selectedGateway) return;
     setTestingPing(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setTestingPing(false);
-    toast.success("API Handshake Successful! (200 OK)", {
-      description: "Credentials verified with provider server.",
-    });
+    try { await api(`/admin/payment-gateways/${selectedGateway.id}/verify`, { method: "POST", body: JSON.stringify({ publishableKey: keysForm.publishableKey, secretKey: keysForm.secretKey }) }); toast.success("Provider credentials verified."); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Provider verification failed"); }
+    finally { setTestingPing(false); }
   };
 
   const totalVolume = gateways.reduce((s, g) => s + g.volume30d, 0);

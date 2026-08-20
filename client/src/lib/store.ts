@@ -1112,6 +1112,14 @@ function getSnapshot() {
   return state;
 }
 
+function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `item-${Date.now()}`; }
+function persistContent(type: string, data: Record<string, unknown>, id?: string, remove = false) {
+  const path = `/admin/content/${type}${id ? `/${id}` : ""}`;
+  if (remove) { api(path, { method: "DELETE" }).catch(() => undefined); return; }
+  const title = String(data.title || data.name || data.label || "Untitled");
+  api(path, { method: id ? "PATCH" : "POST", body: JSON.stringify({ title, slug: String(data.slug || slugify(title)), active: data.active !== false, data }) }).catch(() => undefined);
+}
+
 
 export function useStore<T>(selector: (s: State) => T): T {
   const currentStore = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -1188,19 +1196,23 @@ export const store = {
   updateCompanyInvoiceSettings(patch: Partial<CompanyInvoiceSettings>) {
     state.companyInvoiceSettings = { ...state.companyInvoiceSettings, ...patch };
     emit();
+    api("/admin/settings/invoices", { method: "PUT", body: JSON.stringify(state.companyInvoiceSettings) }).catch(() => undefined);
   },
 
   addCustomerTier(t: CustomerTier) {
     state.customerTiers = [t, ...state.customerTiers];
     emit();
+    persistContent("customer-tiers", t);
   },
   updateCustomerTier(id: string, patch: Partial<CustomerTier>) {
     state.customerTiers = state.customerTiers.map((t) => (t.id === id ? { ...t, ...patch } : t));
     emit();
+    persistContent("customer-tiers", patch, id);
   },
   removeCustomerTier(id: string) {
     state.customerTiers = state.customerTiers.filter((t) => t.id !== id);
     emit();
+    persistContent("customer-tiers", {}, id, true);
   },
 
   addCoupon(c: Coupon) {
@@ -1319,6 +1331,7 @@ export const store = {
     const id = `nc-${Date.now()}`;
     state.navCategories = [{ ...group, id }, ...state.navCategories];
     emit();
+    persistContent("nav-categories", { ...group, title: group.name });
   },
 
   updateNavCategory(id: string, patch: Partial<NavCategoryGroup>) {
@@ -1326,17 +1339,20 @@ export const store = {
       nc.id === id ? { ...nc, ...patch } : nc
     );
     emit();
+    persistContent("nav-categories", { ...patch, title: patch.name }, id);
   },
 
   removeNavCategory(id: string) {
     state.navCategories = state.navCategories.filter((nc) => nc.id !== id);
     emit();
+    persistContent("nav-categories", {}, id, true);
   },
 
   addSidebarOption(opt: Omit<SidebarOption, "id">) {
     const id = `so-${Date.now()}`;
     state.sidebarOptions = [{ ...opt, id }, ...state.sidebarOptions];
     emit();
+    persistContent("sidebar-options", { ...opt, title: opt.label });
   },
 
   updateSidebarOption(id: string, patch: Partial<SidebarOption>) {
@@ -1344,11 +1360,13 @@ export const store = {
       opt.id === id ? { ...opt, ...patch } : opt
     );
     emit();
+    persistContent("sidebar-options", { ...patch, title: patch.label }, id);
   },
 
   removeSidebarOption(id: string) {
     state.sidebarOptions = state.sidebarOptions.filter((opt) => opt.id !== id);
     emit();
+    persistContent("sidebar-options", {}, id, true);
   },
 
   addAdminUser(u: Omit<AdminUser, "id">) {
@@ -1367,6 +1385,11 @@ export const store = {
     emit();
   },
 
+  replaceAdminUsers(users: AdminUser[]) {
+    state.adminUsers = users;
+    emit();
+  },
+
   addRole(r: Omit<Role, "id">) {
     const id = `role-${Date.now()}`;
     state.roles = [{ ...r, id }, ...state.roles];
@@ -1380,6 +1403,11 @@ export const store = {
 
   removeRole(id: string) {
     state.roles = state.roles.filter((r) => r.id !== id);
+    emit();
+  },
+
+  replaceRoles(roles: Role[]) {
+    state.roles = roles;
     emit();
   },
 
@@ -1433,6 +1461,7 @@ export const store = {
   updateFooterConfig(patch: Partial<FooterConfig>) {
     state.footerConfig = { ...state.footerConfig, ...patch };
     emit();
+    api("/admin/settings/footer", { method: "PUT", body: JSON.stringify(state.footerConfig) }).catch(() => undefined);
   },
 
   getHeaderConfig() {
@@ -1442,6 +1471,7 @@ export const store = {
   updateHeaderConfig(patch: Partial<HeaderConfig>) {
     state.headerConfig = { ...state.headerConfig, ...patch };
     emit();
+    api("/admin/settings/header", { method: "PUT", body: JSON.stringify(state.headerConfig) }).catch(() => undefined);
   },
 
   getFaviconConfig() {
@@ -1451,6 +1481,7 @@ export const store = {
   updateFaviconConfig(patch: Partial<FaviconConfig>) {
     state.faviconConfig = { ...state.faviconConfig, ...patch };
     emit();
+    api("/admin/settings/favicon", { method: "PUT", body: JSON.stringify(state.faviconConfig) }).catch(() => undefined);
   },
 
   getThemeConfig() {
@@ -1460,5 +1491,6 @@ export const store = {
   updateThemeConfig(patch: Partial<ThemeConfig>) {
     state.themeConfig = { ...state.themeConfig, ...patch };
     emit();
+    api("/admin/settings/theme", { method: "PUT", body: JSON.stringify(state.themeConfig) }).catch(() => undefined);
   },
 };

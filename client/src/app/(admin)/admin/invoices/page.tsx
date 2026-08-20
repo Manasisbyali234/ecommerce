@@ -63,6 +63,7 @@ import { PageHeader } from "@/components/page-header";
 import { formatCurrency, type Invoice, type Order, type OrderItem } from "@/lib/mock-data";
 import { store, useStore, type CompanyInvoiceSettings } from "@/lib/store";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { api, downloadApiFile } from "@/lib/api";
 
 const statusColor: Record<Invoice["status"], string> = {
   paid: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
@@ -132,10 +133,9 @@ export default function InvoicesPage() {
   }, [items]);
 
 
-  const handleDownload = (inv: Invoice) => {
-    const order = orders.find((o) => o.id === inv.orderId);
-    downloadInvoicePdf(inv, order, order?.email);
-    toast.success(`Downloading PDF for ${inv.id}`);
+  const handleDownload = async (inv: Invoice) => {
+    try { await downloadApiFile(`/admin/invoices/${inv.id}/pdf`, `${inv.id}.pdf`); toast.success(`Downloading PDF for ${inv.id}`); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to download invoice"); }
   };
 
   const handleCreateInvoice = () => {
@@ -165,32 +165,9 @@ export default function InvoicesPage() {
     toast.success(`Invoice ${invId} created successfully!`);
   };
 
-  const exportInvoicesCsv = () => {
-    const headers = ["Invoice ID", "Order ID", "Customer Name", "Issue Date", "Due Date", "Amount (INR)", "Status", "Emailed Date"];
-    const rows = filtered.map((i) => [
-      i.id,
-      i.orderId,
-      `"${i.customer.replace(/"/g, '""')}"`,
-      i.issued,
-      i.due,
-      i.amount,
-      i.status.toUpperCase(),
-      i.emailedAt || "Not Emailed",
-    ]);
-
-    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `invoices_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("Invoices Exported to CSV!", {
-      description: `Exported ${filtered.length} invoice records.`,
-    });
+  const exportInvoicesCsv = async () => {
+    try { await downloadApiFile("/admin/exports/invoices.csv", "invoices.csv"); toast.success("Invoices Exported to CSV!"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to export invoices"); }
   };
 
   return (
@@ -1218,7 +1195,8 @@ function EmailInvoiceDialog({
       return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 500));
+    try { await api(`/admin/invoices/${invoice.id}/email`, { method: "POST" }); }
+    catch (error) { setSending(false); toast.error(error instanceof Error ? error.message : "Unable to send invoice email"); return; }
     const now = new Date().toISOString().slice(0, 16).replace("T", " ");
     store.updateInvoice(invoice.id, { emailedAt: now });
     setSending(false);

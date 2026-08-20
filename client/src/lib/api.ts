@@ -16,6 +16,17 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return data as T;
 }
 
+/** Fetches an authenticated file returned by the API and prompts a browser download. */
+export async function downloadApiFile(path: string, fallbackName: string) {
+  const token = getAccessToken();
+  const response = await fetch(`${API_URL}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {}, cache: "no-store" });
+  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "File download failed"); }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") || "";
+  const name = disposition.match(/filename=\"?([^\";]+)\"?/)?.[1] || fallbackName;
+  const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+}
+
 export const authApi = {
   requestOtp: (phone: string) => api<{ message: string; debugOtp?: string }>("/auth/request-otp", { method: "POST", body: JSON.stringify({ phone }) }),
   verifyOtp: (phone: string, code: string) => api<{ token: string; user: { phone?: string; fullName?: string } }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, code }) }),

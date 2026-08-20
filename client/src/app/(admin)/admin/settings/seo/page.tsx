@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Globe,
   Search,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export default function SeoSettingsPage() {
   const [metaTitle, setMetaTitle] = useState("Metromindz Store — India's Premier Online Fashion & Lifestyle Destination");
@@ -23,10 +24,12 @@ export default function SeoSettingsPage() {
   const [gaId, setGaId] = useState("G-9981230491");
   const [fbPixelId, setFbPixelId] = useState("102938475619283");
 
-  const handleSave = () => {
-    toast.success("SEO Meta Tags & Tracking Pixels Saved!", {
+  useEffect(() => { api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/seo").then(({ setting }) => { const v = setting.value; setMetaTitle(String(v.metaTitle || metaTitle)); setMetaDescription(String(v.metaDescription || metaDescription)); setOgImageUrl(String(v.ogImageUrl || ogImageUrl)); setGaId(String(v.gaId || gaId)); setFbPixelId(String(v.fbPixelId || fbPixelId)); }).catch(() => undefined); }, []);
+
+  const handleSave = async () => {
+    try { await api("/admin/settings/seo", { method: "PUT", body: JSON.stringify({ metaTitle, metaDescription, ogImageUrl, gaId, fbPixelId }) }); toast.success("SEO Meta Tags & Tracking Pixels Saved!", {
       description: "Search engines and analytics scripts will consume updated values.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save SEO settings"); }
   };
 
   return (

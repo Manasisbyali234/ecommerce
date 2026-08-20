@@ -8,7 +8,7 @@ import { api, getAccessToken } from "./api";
 type WishlistContextType = {
   wishlist: string[];
   wishlistProducts: Product[];
-  toggleWishlist: (productId: string, productName?: string) => void;
+  toggleWishlist: (productId: string, productName?: string) => void | Promise<void>;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
   wishlistCount: number;
@@ -17,15 +17,24 @@ type WishlistContextType = {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [wishlist, setWishlist] = useState<string[]>(["P-1002", "P-1006"]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!getAccessToken()) return;
-    api<{ items: Product[] }>("/wishlist").then(({ items }) => setWishlist(items.map((item) => item.id))).catch(() => setWishlist([]));
+    api<{ items: Product[] }>("/wishlist").then(({ items }) => { setWishlist(items.map((item) => item.id)); setWishlistProducts(items); }).catch(() => { setWishlist([]); setWishlistProducts([]); });
   }, []);
 
-  const toggleWishlist = (productId: string, productName?: string) => {
-    if (getAccessToken()) api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to update wishlist"));
+  const toggleWishlist = async (productId: string, productName?: string) => {
+    if (getAccessToken()) {
+      try {
+        const { saved } = await api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" });
+        if (saved) {
+          const product = await api<{ product: Product }>(`/products/${productId}`);
+          setWishlistProducts((items) => [...items.filter((item) => item.id !== productId), product.product]);
+        } else setWishlistProducts((items) => items.filter((item) => item.id !== productId));
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update wishlist"); return; }
+    }
     setWishlist((prev) => {
       const isSaved = prev.includes(productId);
       const targetName = productName || products.find((p) => p.id === productId)?.name || "Product";
@@ -42,17 +51,19 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const isInWishlist = (productId: string) => wishlist.includes(productId);
 
   const clearWishlist = () => {
+    if (getAccessToken()) Promise.all(wishlist.map((id) => api(`/wishlist/${id}`, { method: "PUT" }))).catch(() => undefined);
     setWishlist([]);
+    setWishlistProducts([]);
     toast.info("Wishlist cleared");
   };
 
-  const wishlistProducts = products.filter((p) => wishlist.includes(p.id));
+  const displayedWishlistProducts = getAccessToken() ? wishlistProducts : products.filter((p) => wishlist.includes(p.id));
 
   return (
     <WishlistContext.Provider
       value={{
         wishlist,
-        wishlistProducts,
+        wishlistProducts: displayedWishlistProducts,
         toggleWishlist,
         isInWishlist,
         clearWishlist,

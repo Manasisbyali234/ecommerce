@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User,
@@ -45,6 +46,7 @@ import { useWishlist } from "@/lib/wishlist-context";
 import { useCart } from "@/lib/cart-context";
 import { formatCurrency } from "@/lib/mock-data";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { clearAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,6 +89,7 @@ const INDIAN_STATES = [
 ];
 
 export default function CustomerAccountDashboardPage() {
+  const router = useRouter();
   const profile = useStore((s) => s.customerProfile);
   const addresses = useStore((s) => s.customerAddresses);
   const orders = useStore((s) => s.orders);
@@ -169,9 +172,11 @@ export default function CustomerAccountDashboardPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const handleLogout = () => {
+    clearAccessToken();
     toast.success("Logged out successfully!", {
       description: "You have been logged out of your account.",
     });
+    router.push("/");
   };
 
   const handleDeleteAccount = (e: React.FormEvent) => {

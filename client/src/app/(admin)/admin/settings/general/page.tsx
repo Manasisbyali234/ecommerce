@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Store,
   Save,
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export default function GeneralSettingsPage() {
   const [storeName, setStoreName] = useState("Metromindz E-Commerce Store");
@@ -41,10 +42,12 @@ export default function GeneralSettingsPage() {
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
   const [lowStockThreshold, setLowStockThreshold] = useState("5");
 
-  const handleSave = () => {
-    toast.success("General Store Settings Updated Successfully!", {
+  useEffect(() => { api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/general").then(({ setting }) => { const v = setting.value; setStoreName(String(v.storeName || storeName)); setTagline(String(v.tagline || tagline)); setCurrency(String(v.currency || currency)); setTimezone(String(v.timezone || timezone)); setSupportEmail(String(v.supportEmail || supportEmail)); setSupportPhone(String(v.supportPhone || supportPhone)); setMaintenanceMode(Boolean(v.maintenanceMode)); setAutoConfirmOrders(v.autoConfirmOrders !== false); setLowStockAlerts(v.lowStockAlerts !== false); setLowStockThreshold(String(v.lowStockThreshold || lowStockThreshold)); }).catch(() => undefined); }, []);
+
+  const handleSave = async () => {
+    try { await api("/admin/settings/general", { method: "PUT", body: JSON.stringify({ storeName, tagline, currency, timezone, supportEmail, supportPhone, maintenanceMode, autoConfirmOrders, lowStockAlerts, lowStockThreshold }) }); toast.success("General Store Settings Updated Successfully!", {
       description: "Changes applied across all website storefront components.",
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save settings"); }
   };
 
   return (

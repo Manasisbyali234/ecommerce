@@ -156,7 +156,7 @@ function ProductsContent() {
     });
 
     return [...baseConfig, ...dynamicCustomFilters];
-  }, [selectedCategory]);
+  }, [selectedCategory, initialProducts]);
 
   // Reset secondary filters when primary category changes
   useEffect(() => {
@@ -172,7 +172,7 @@ function ProductsContent() {
       counts[b] = (counts[b] || 0) + 1;
     });
     return counts;
-  }, []);
+  }, [initialProducts]);
 
   // Extract category counts
   const categoryCounts = useMemo(() => {
@@ -181,7 +181,7 @@ function ProductsContent() {
       counts[p.category] = (counts[p.category] || 0) + 1;
     });
     return counts;
-  }, []);
+  }, [initialProducts]);
 
   // Filtered and Sorted Products
   const filteredProducts = useMemo(() => {
@@ -293,6 +293,7 @@ function ProductsContent() {
     minDiscount,
     selectedSecondaryFilters,
     sortBy,
+    initialProducts,
   ]);
 
   // Toggle brand checkbox
