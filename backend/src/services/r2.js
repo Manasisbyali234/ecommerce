@@ -34,8 +34,8 @@ export async function uploadR2Image({ folder, fileName, contentType, body }) {
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const date = amzDate.slice(0, 8);
   const payloadHash = sha256(body);
-  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+  const canonicalHeaders = `content-type:${contentType}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "content-type;x-amz-content-sha256;x-amz-date";
   const credentialScope = `${date}/auto/s3/aws4_request`;
   const canonicalRequest = `PUT\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${sha256(canonicalRequest)}`;
@@ -43,7 +43,7 @@ export async function uploadR2Image({ folder, fileName, contentType, body }) {
   const authorization = `AWS4-HMAC-SHA256 Credential=${env.r2AccessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   const response = await fetch(new URL(path, endpoint.origin), {
     method: "PUT",
-    headers: { "content-type": contentType, host, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, authorization },
+    headers: { "content-type": contentType, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, authorization },
     body,
   });
   if (!response.ok) throw fail(502, "Cloudflare R2 could not store the image");

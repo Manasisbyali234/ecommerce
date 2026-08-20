@@ -256,7 +256,8 @@ export default function AdminBannersPage() {
     }
 
     try {
-      const payload = { title: finalDraft.title, slug: finalDraft.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `banner-${Date.now()}`, active: finalDraft.active, data: finalDraft };
+      const baseSlug = finalDraft.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "banner";
+      const payload = { title: finalDraft.title, slug: editingId ? baseSlug : `${baseSlug}-${Date.now()}`, active: finalDraft.active, data: finalDraft };
       if (editingId) {
         const { item: saved } = await api<{ item: { id: string; title: string; active: boolean; data: Omit<Banner, "id"> } }>(`/admin/content/banners/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) });
         const savedBanner = toBanner(saved);

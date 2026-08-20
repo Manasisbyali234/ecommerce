@@ -32,7 +32,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (getAccessToken()) {
       api<{ cart: { items: Array<{ product: Product; quantity: number }> } }>("/cart")
-        .then(({ cart }) => setItems(cart.items.map((item) => ({ product: item.product, quantity: item.quantity }))))
+        .then(({ cart }) => setItems(cart.items.map((item) => ({ product: { ...item.product, id: (item.product as any)._id ?? item.product.id }, quantity: item.quantity }))))
         .catch(() => setItems([]));
       return;
     }
