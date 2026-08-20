@@ -17,7 +17,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 
 /** Uploads an admin image directly to the configured Cloudflare R2 folder. */
-export async function uploadImage(folder: "products" | "banners", file: File): Promise<string> {
+export async function uploadImage(folder: "products" | "banners" | "categories" | "sub-categories" | "brands" | "favicon", file: File): Promise<string> {
   const token = getAccessToken();
   const response = await fetch(`${API_URL}/admin/uploads/${folder}`, {
     method: "PUT",

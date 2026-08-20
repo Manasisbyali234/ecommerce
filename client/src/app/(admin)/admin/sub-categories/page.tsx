@@ -21,13 +21,13 @@ import { toast } from "sonner";
 
 import { useStore, store, type SubCategory } from "@/lib/store";
 import { PageHeader } from "@/components/page-header";
+import { api, uploadImage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -162,23 +162,16 @@ export default function AdminSubCategoriesPage() {
     try { await api(`/admin/content/sub-categories/${id}`, { method: "DELETE" }); setSubCategories((items) => items.filter((item) => item.id !== id)); toast.success("Sub category removed"); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to remove subcategory"); }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size exceeds recommended limit of 5 MB");
-      return;
+    try {
+      const imageUrl = await uploadImage("sub-categories", file);
+      setDraft((prev) => ({ ...prev, image: imageUrl }));
+      toast.success(`Uploaded "${file.name}" to Cloudflare R2`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to upload image");
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setDraft((prev) => ({ ...prev, image: event.target!.result as string }));
-        toast.success(`Uploaded image "${file.name}"`);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const startQuickReplace = (sc: SubCategory) => {
@@ -192,23 +185,15 @@ export default function AdminSubCategoriesPage() {
     }
   };
 
-  const handleQuickFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuickFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size exceeds recommended limit of 5 MB");
-      return;
+    try {
+      setQuickImageUrl(await uploadImage("sub-categories", file));
+      toast.success(`Uploaded "${file.name}" to Cloudflare R2`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to upload image");
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setQuickImageUrl(event.target.result as string);
-        toast.success(`Loaded image "${file.name}"`);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   return (
