@@ -595,11 +595,12 @@ export default function ProductsPage() {
   };
 
   const handleRemoveGalleryImage = (idx: number) => {
+    const imgUrl = (formData.images || [])[idx];
     const updated = (formData.images || []).filter((_, i) => i !== idx);
     setFormData((prev) => ({
       ...prev,
       images: updated,
-      image: updated[0] || "",
+      image: prev.image === imgUrl ? (updated[0] || "") : prev.image,
     }));
   };
 

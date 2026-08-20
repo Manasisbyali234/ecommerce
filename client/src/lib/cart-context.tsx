@@ -45,19 +45,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addItem = (product: Product, quantity = 1) => {
+    const normalizedProduct = { ...product, id: (product as any)._id ?? product.id };
     setItems((prev) => {
-      const existingIndex = prev.findIndex((i) => i.product.id === product.id);
+      const existingIndex = prev.findIndex((i) => i.product.id === normalizedProduct.id);
       if (existingIndex > -1) {
         const next = [...prev];
         next[existingIndex] = {
           ...next[existingIndex],
           quantity: next[existingIndex].quantity + quantity,
         };
-        if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: product.id, quantity: next[existingIndex].quantity }) }).catch(() => undefined);
+        if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity: next[existingIndex].quantity }) }).catch(() => undefined);
         return next;
       }
-      if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: product.id, quantity }) }).catch(() => undefined);
-      return [...prev, { product, quantity }];
+      if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity }) }).catch(() => undefined);
+      return [...prev, { product: normalizedProduct, quantity }];
     });
     setIsOpen(true);
   };
