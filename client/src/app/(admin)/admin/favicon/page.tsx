@@ -29,6 +29,39 @@ import {
   initialFaviconConfig,
   type FaviconConfig,
 } from "@/lib/store";
+import { uploadImage, api } from "@/lib/api";
+
+/** Extract the R2 object key from a public R2 URL (everything after the bucket base). */
+function r2KeyFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    // key is the pathname without leading slash, strip any ?v= cache-bust param
+    return u.pathname.replace(/^\//, "").split("?")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Append/replace a ?v= cache-busting query param on a URL. */
+function cacheBust(url: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("v", Date.now().toString());
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/** Delete an old R2 favicon file by its object key. */
+async function deleteOldFavicon(oldUrl: string) {
+  const key = r2KeyFromUrl(oldUrl);
+  if (!key || !key.startsWith("favicon/")) return;
+  await api("/admin/uploads/favicon", {
+    method: "DELETE",
+    body: JSON.stringify({ key }),
+  }).catch(() => undefined);
+}
 
 export default function AdminFaviconPage() {
   const currentConfig = useStore(
@@ -38,6 +71,8 @@ export default function AdminFaviconPage() {
   const [config, setConfig] = useState<FaviconConfig>(
     JSON.parse(JSON.stringify(currentConfig))
   );
+  const [uploading, setUploading] = useState(false);
+  const [uploadingApple, setUploadingApple] = useState(false);
 
   // Save changes to central store & browser head
   const handleSaveChanges = () => {
@@ -46,8 +81,11 @@ export default function AdminFaviconPage() {
   };
 
   // Reset to initial default favicon settings
-  const handleResetDefault = () => {
+  const handleResetDefault = async () => {
     const fresh = JSON.parse(JSON.stringify(initialFaviconConfig));
+    // Delete old R2 files if they were R2-hosted
+    if (config.faviconUrl) await deleteOldFavicon(config.faviconUrl);
+    if (config.appleTouchIconUrl) await deleteOldFavicon(config.appleTouchIconUrl);
     setConfig(fresh);
     store.updateFaviconConfig(fresh);
     toast.info("Favicon reset to default!");
@@ -195,22 +233,30 @@ export default function AdminFaviconPage() {
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={uploading}
                       className="text-xs font-semibold gap-1.5 cursor-pointer relative"
                     >
-                      <Upload className="h-3.5 w-3.5" /> Select Favicon File
+                      <Upload className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Select Favicon File"}
                       <input
                         type="file"
                         accept="image/*,.ico,.svg"
                         className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              setConfig({ ...config, faviconUrl: ev.target?.result as string });
-                              toast.success("Favicon file uploaded successfully!");
-                            };
-                            reader.readAsDataURL(file);
+                          if (!file) return;
+                          setUploading(true);
+                          try {
+                            const oldUrl = config.faviconUrl;
+                            const url = await uploadImage("favicon", file);
+                            const bustedUrl = cacheBust(url);
+                            if (oldUrl && oldUrl !== bustedUrl) await deleteOldFavicon(oldUrl);
+                            setConfig((c) => ({ ...c, faviconUrl: bustedUrl }));
+                            toast.success("Favicon uploaded to Cloudflare R2!");
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : "Upload failed");
+                          } finally {
+                            setUploading(false);
+                            e.target.value = "";
                           }
                         }}
                       />
@@ -221,7 +267,8 @@ export default function AdminFaviconPage() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
+                          await deleteOldFavicon(config.faviconUrl);
                           setConfig({ ...config, faviconUrl: "" });
                           toast.info("Favicon removed");
                         }}
@@ -312,22 +359,30 @@ export default function AdminFaviconPage() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    disabled={uploadingApple}
                     className="text-xs font-semibold gap-1.5 cursor-pointer relative"
                   >
-                    <Upload className="h-3.5 w-3.5" /> Upload iOS Icon
+                    <Upload className="h-3.5 w-3.5" /> {uploadingApple ? "Uploading…" : "Upload iOS Icon"}
                     <input
                       type="file"
                       accept="image/*"
                       className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            setConfig({ ...config, appleTouchIconUrl: ev.target?.result as string });
-                            toast.success("Apple Touch Icon uploaded successfully!");
-                          };
-                          reader.readAsDataURL(file);
+                        if (!file) return;
+                        setUploadingApple(true);
+                        try {
+                          const oldUrl = config.appleTouchIconUrl;
+                          const url = await uploadImage("favicon", file);
+                          const bustedUrl = cacheBust(url);
+                          if (oldUrl && oldUrl !== bustedUrl) await deleteOldFavicon(oldUrl);
+                          setConfig((c) => ({ ...c, appleTouchIconUrl: bustedUrl }));
+                          toast.success("Apple Touch Icon uploaded to Cloudflare R2!");
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : "Upload failed");
+                        } finally {
+                          setUploadingApple(false);
+                          e.target.value = "";
                         }
                       }}
                     />

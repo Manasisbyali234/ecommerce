@@ -62,9 +62,9 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
-              {items.map(({ product, quantity }) => (
+              {items.map(({ product, quantity }, index) => (
                 <div
-                  key={product.id}
+                  key={product.id ?? index}
                   className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-accent/40"
                 >
                   <img

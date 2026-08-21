@@ -45,7 +45,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api";
+import { api, uploadImage } from "@/lib/api";
 import { useProducts } from "@/hooks/use-products";
 
 export interface BrandItem {
@@ -138,8 +138,21 @@ export default function AdminBrandsPage() {
 
   useEffect(() => {
     api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<BrandItem, "id"> }> }>("/admin/content/brands")
-      .then(({ items }) => setBrands(items.map((item) => ({ ...item.data, id: item.id, name: item.data.name || item.title, active: item.active }))))
-      .catch(() => toast.error("Unable to load saved brands"));
+      .then(({ items }) =>
+        setBrands(
+          items.map((item) => ({
+            slug: "",
+            description: "",
+            logo: "",
+            featured: false,
+            ...(item.data ?? {}),
+            id: item.id,
+            name: item.data?.name || item.title,
+            active: item.active,
+          }))
+        )
+      )
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Unable to load saved brands"));
   }, []);
 
   // Filtered brands list
@@ -230,17 +243,17 @@ export default function AdminBrandsPage() {
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to remove brand"); }
   };
 
-  // Local logo image upload
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload logo to Cloudflare R2 brands/ folder
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setDraft((prev) => ({ ...prev, logo: evt.target?.result as string }));
-      toast.success("Logo uploaded from device!");
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImage("brands", file);
+      setDraft((prev) => ({ ...prev, logo: url }));
+      toast.success(`Uploaded "${file.name}" to Cloudflare R2`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to upload logo");
+    }
   };
 
   // Save changes (Create / Edit)
@@ -251,28 +264,18 @@ export default function AdminBrandsPage() {
     }
     const slug = draft.slug.trim() || draft.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-    const brandData = { name: draft.name, slug, description: draft.description, logo: draft.logo || "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=200", active: draft.active, featured: draft.featured };
+    const brandData = { name: draft.name, slug, description: draft.description, logo: draft.logo, active: draft.active, featured: draft.featured };
     try { if (editingId) {
-      // Update
+      // Update — if logo changed, old R2 image is cleaned up server-side on delete only;
+      // new logo is already uploaded to R2 before save.
       await api(`/admin/content/brands/${editingId}`, { method: "PATCH", body: JSON.stringify({ title: brandData.name, slug, active: brandData.active, data: brandData }) });
       setBrands((prev) =>
-        prev.map((b) => (b.id === editingId ? { ...b, ...draft, slug } : b))
+        prev.map((b) => (b.id === editingId ? { ...b, ...brandData, id: editingId } : b))
       );
       toast.success(`Updated brand "${draft.name}"`);
     } else {
-      // Create
-      const newBrand: BrandItem = {
-        id: `B-${brands.length + 1}`,
-        name: draft.name,
-        slug,
-        description: draft.description,
-        logo: draft.logo || "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=200",
-        active: draft.active,
-        featured: draft.featured,
-      };
-      const { item } = await api<{ item: { id: string } }>("/admin/content/brands", { method: "POST", body: JSON.stringify({ title: brandData.name, slug, active: brandData.active, data: brandData }) });
-      newBrand.id = item.id;
-      setBrands((prev) => [...prev, newBrand]);
+      const { item } = await api<{ item: { id: string; data: Omit<BrandItem, "id">; active: boolean } }>("/admin/content/brands", { method: "POST", body: JSON.stringify({ title: brandData.name, slug, active: brandData.active, data: brandData }) });
+      setBrands((prev) => [...prev, { ...brandData, id: item.id }]);
       toast.success(`Created brand "${draft.name}"`);
     }
     setOpen(false);

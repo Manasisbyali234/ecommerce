@@ -27,8 +27,13 @@ function missingConfiguration() {
 }
 
 export async function uploadR2Image({ folder, fileName, contentType, body }) {
+<<<<<<< HEAD
   if (!configured()) throw fail(503, `Cloudflare R2 is not configured: ${missingConfiguration()}`);
   if (!["products", "banners"].includes(folder)) throw fail(400, "Invalid image folder");
+=======
+  if (!configured()) throw fail(503, "Cloudflare R2 is not configured");
+  if (!["products", "banners", "categories", "sub-categories", "brands", "favicon"].includes(folder)) throw fail(400, "Invalid image folder");
+>>>>>>> 6a90f320071b5ae05a9ef1e57fe043141cc80e11
   if (!contentType?.startsWith("image/")) throw fail(400, "Only image uploads are supported");
   if (!Buffer.isBuffer(body) || body.length === 0) throw fail(400, "An image file is required");
   if (body.length > 10 * 1024 * 1024) throw fail(400, "Image must be 10 MB or smaller");
@@ -43,8 +48,8 @@ export async function uploadR2Image({ folder, fileName, contentType, body }) {
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const date = amzDate.slice(0, 8);
   const payloadHash = sha256(body);
-  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+  const canonicalHeaders = `content-type:${contentType}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "content-type;x-amz-content-sha256;x-amz-date";
   const credentialScope = `${date}/auto/s3/aws4_request`;
   const canonicalRequest = `PUT\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${sha256(canonicalRequest)}`;
@@ -52,11 +57,32 @@ export async function uploadR2Image({ folder, fileName, contentType, body }) {
   const authorization = `AWS4-HMAC-SHA256 Credential=${env.r2AccessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   const response = await fetch(new URL(path, endpoint.origin), {
     method: "PUT",
-    headers: { "content-type": contentType, host, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, authorization },
+    headers: { "content-type": contentType, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, authorization },
     body,
   });
   if (!response.ok) throw fail(502, "Cloudflare R2 could not store the image");
 
   const publicBase = (env.r2PublicUrl || `${endpoint.origin}/${env.r2BucketName}`).replace(/\/$/, "");
   return { key, url: `${publicBase}/${encodePath(key)}` };
+}
+
+export async function deleteR2Image(key) {
+  if (!configured() || !key) return;
+  const endpoint = new URL(env.r2Endpoint || env.r2PublicUrl);
+  const path = `/${env.r2BucketName}/${encodePath(key)}`;
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const date = amzDate.slice(0, 8);
+  const payloadHash = sha256("");
+  const canonicalHeaders = `x-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "x-amz-content-sha256;x-amz-date";
+  const credentialScope = `${date}/auto/s3/aws4_request`;
+  const canonicalRequest = `DELETE\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${sha256(canonicalRequest)}`;
+  const signature = hmac(signingKey(env.r2SecretAccessKey, date), stringToSign, "hex");
+  const authorization = `AWS4-HMAC-SHA256 Credential=${env.r2AccessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  await fetch(new URL(path, endpoint.origin), {
+    method: "DELETE",
+    headers: { "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, authorization },
+  }).catch(() => {});
 }

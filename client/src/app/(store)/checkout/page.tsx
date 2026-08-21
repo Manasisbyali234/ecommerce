@@ -141,10 +141,10 @@ export default function StorefrontCheckoutPage() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(async ({ coords }) => {
       try {
-        const result = await api<{ success: boolean; details?: { street?: string; city?: string; state?: string; pincode?: string } }>(`/location/reverse-geocode?lat=${coords.latitude}&lng=${coords.longitude}`);
+        const result = await api<{ success: boolean; formatted_address?: string; details?: { street?: string; city?: string; state?: string; pincode?: string } }>(`/location/reverse-geocode?lat=${coords.latitude}&lng=${coords.longitude}`);
         if (!result.success || !result.details) throw new Error("Location details were not found");
         setIsAddingCustomAddress(true);
-        setCustomAddress((current) => ({ ...current, street: result.details?.street || current.street, city: result.details?.city || current.city, state: result.details?.state || current.state, pincode: result.details?.pincode || current.pincode }));
+        setCustomAddress((current) => ({ ...current, street: result.details?.street || result.formatted_address || current.street, city: result.details?.city || current.city, state: result.details?.state || current.state, pincode: result.details?.pincode || current.pincode }));
         toast.success("Address fields filled from your location");
       } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to get address from location"); }
       finally { setIsLocating(false); }
@@ -526,21 +526,23 @@ export default function StorefrontCheckoutPage() {
                       </div>
                       <div className="space-y-1 sm:col-span-2">
                         <Label htmlFor="cstreet" className="text-xs">Street Address / House No.</Label>
-                        <Input
-                          id="cstreet"
-                          placeholder="Flat, House no., Building, Street"
-                          value={customAddress.street}
-                          onChange={(e) => setCustomAddress({ ...customAddress, street: e.target.value })}
-                        />
-                        {addressSuggestions.length > 0 && (
-                          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-lg">
-                            {addressSuggestions.map((suggestion) => (
-                              <button key={suggestion.place_id} type="button" className="block w-full px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => { setCustomAddress({ ...customAddress, street: suggestion.description }); setAddressSuggestions([]); }}>
-                                {suggestion.description}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <div className="relative">
+                          <Input
+                            id="cstreet"
+                            placeholder="Flat, House no., Building, Street"
+                            value={customAddress.street}
+                            onChange={(e) => setCustomAddress({ ...customAddress, street: e.target.value })}
+                          />
+                          {addressSuggestions.length > 0 && (
+                            <div className="absolute z-20 top-full mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-lg">
+                              {addressSuggestions.map((suggestion) => (
+                                <button key={suggestion.place_id} type="button" className="block w-full px-3 py-2 text-left text-xs hover:bg-muted" onClick={() => { setCustomAddress({ ...customAddress, street: suggestion.description }); setAddressSuggestions([]); }}>
+                                  {suggestion.description}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor="ccity" className="text-xs">City</Label>

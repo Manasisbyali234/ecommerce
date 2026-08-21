@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
-import { products, type ProductReview } from "@/lib/mock-data";
+import { type ProductReview } from "@/lib/mock-data";
 import { api } from "@/lib/api";
 
 interface AdminReviewItem extends ProductReview {
@@ -55,101 +55,6 @@ interface AdminReviewItem extends ProductReview {
   productImage: string;
   status: "approved" | "pending" | "rejected";
 }
-
-const initialAdminReviews: AdminReviewItem[] = [
-  {
-    id: "rev-pending-1",
-    productId: products[0].id,
-    productName: products[0].name,
-    productImage: products[0].image,
-    author: "Deepak Choudhary",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "Just now (10 mins ago)",
-    title: "Incredible soundstage and ANC quality!",
-    comment: "Bought this 3 days ago. The soundstage is rich with deep bass and crisp vocals. Battery lasted 30+ hours on my business trip.",
-    images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"],
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    videoPoster: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600",
-    status: "pending",
-  },
-  {
-    id: "rev-pending-2",
-    productId: products[1]?.id || products[0].id,
-    productName: products[1]?.name || "Apex Pro Wireless Gaming Headset",
-    productImage: products[1]?.image || products[0].image,
-    author: "Meera Nair",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-    verifiedBuyer: true,
-    rating: 4,
-    date: "1 hour ago",
-    title: "Solid build quality & fast USB-C charging",
-    comment: "Packaging was pristine with official warranty card. Microphones work flawlessly for online meetings. Would give 5 stars if cable was slightly longer.",
-    images: ["https://images.unsplash.com/photo-1484704849700-f032a568e944?w=500"],
-    status: "pending",
-  },
-  {
-    id: "rev-approved-1",
-    productId: products[0].id,
-    productName: products[0].name,
-    productImage: products[0].image,
-    author: "Rohan Sharma",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 28, 2026",
-    title: "Absolutely worth every rupee!",
-    comment: "The sound clarity and battery life blew me away. I've been using it daily for over two weeks now without any latency issues.",
-    images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"],
-    status: "approved",
-  },
-  {
-    id: "rev-approved-2",
-    productId: products[0].id,
-    productName: products[0].name,
-    productImage: products[0].image,
-    author: "Priya Patel",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 24, 2026",
-    title: "Super comfortable for long work hours!",
-    comment: "The ear cushions feel super soft and weightless. Even after 4-5 hours of continuous calls, my ears don't hurt.",
-    images: ["https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=500"],
-    status: "approved",
-  },
-  {
-    id: "rev-approved-3",
-    productId: products[0].id,
-    productName: products[0].name,
-    productImage: products[0].image,
-    author: "Sneha Roy",
-    avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 21, 2026",
-    title: "Stylish design & solid swivel joints!",
-    comment: "Made a short hands-on video review demonstrating the smooth swivel joints and easy touch controls.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    videoPoster: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600",
-    status: "approved",
-  },
-  {
-    id: "rev-rejected-1",
-    productId: products[0].id,
-    productName: products[0].name,
-    productImage: products[0].image,
-    author: "Anonymous User",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-    verifiedBuyer: false,
-    rating: 1,
-    date: "July 10, 2026",
-    title: "Spam submission",
-    comment: "Irrelevant promotional link posted in review body.",
-    status: "rejected",
-  },
-];
 
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<AdminReviewItem[]>([]);
