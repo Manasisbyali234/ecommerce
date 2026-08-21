@@ -17,8 +17,17 @@ function configured() {
   return Boolean(env.r2AccessKeyId && env.r2SecretAccessKey && env.r2BucketName && (env.r2Endpoint || env.r2PublicUrl));
 }
 
+function missingConfiguration() {
+  return [
+    !env.r2AccessKeyId && "R2_ACCESS_KEY_ID",
+    !env.r2SecretAccessKey && "R2_SECRET_ACCESS_KEY",
+    !env.r2BucketName && "R2_BUCKET_NAME",
+    !(env.r2Endpoint || env.r2PublicUrl) && "R2_ENDPOINT or R2_PUBLIC_URL",
+  ].filter(Boolean).join(", ");
+}
+
 export async function uploadR2Image({ folder, fileName, contentType, body }) {
-  if (!configured()) throw fail(503, "Cloudflare R2 is not configured");
+  if (!configured()) throw fail(503, `Cloudflare R2 is not configured: ${missingConfiguration()}`);
   if (!["products", "banners"].includes(folder)) throw fail(400, "Invalid image folder");
   if (!contentType?.startsWith("image/")) throw fail(400, "Only image uploads are supported");
   if (!Buffer.isBuffer(body) || body.length === 0) throw fail(400, "An image file is required");

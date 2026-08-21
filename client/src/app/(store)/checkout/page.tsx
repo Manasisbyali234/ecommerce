@@ -77,7 +77,7 @@ export default function StorefrontCheckoutPage() {
     }
     const found = savedAddresses.find((a) => a.id === selectedAddressId);
     return found || savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
-  }, [selectedAddressId, isAddingCustomAddress, customAddress]);
+  }, [selectedAddressId, isAddingCustomAddress, customAddress, savedAddresses]);
 
   // Convert cart items to CartLine format for coupon evaluation
   const cartLines: CartLine[] = useMemo(
@@ -587,7 +587,7 @@ export default function StorefrontCheckoutPage() {
                     className="h-12 px-8 font-semibold shadow-md"
                     onClick={handlePlaceOrder}
                   >
-                    Place Order ({formatCurrency(total)}) <CheckCircle2 className="ml-2 h-4 w-4" />
+                    Complete Order ({formatCurrency(total)}) <CheckCircle2 className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

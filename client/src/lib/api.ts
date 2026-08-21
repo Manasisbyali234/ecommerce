@@ -40,7 +40,7 @@ export async function downloadApiFile(path: string, fallbackName: string) {
   if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "File download failed"); }
   const blob = await response.blob();
   const disposition = response.headers.get("content-disposition") || "";
-  const name = disposition.match(/filename=\"?([^\";]+)\"?/)?.[1] || fallbackName;
+  const name = disposition.match(/filename="?([^";]+)"?/)?.[1] || fallbackName;
   const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
 }
 

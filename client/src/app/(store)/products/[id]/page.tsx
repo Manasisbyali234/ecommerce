@@ -67,112 +67,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const sampleCustomerReviews: ProductReview[] = [
-  {
-    id: "rev-1",
-    author: "Rohan Sharma",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 28, 2026",
-    title: "Absolutely worth every rupee! Premium build and acoustic quality.",
-    comment: "The sound clarity and battery life blew me away. I've been using it daily for over two weeks now without any latency issues. The USB-C fast charging is ultra convenient for travel.",
-    images: [
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
-      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=500",
-    ],
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    videoPoster: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600",
-    likes: 24,
-  },
-  {
-    id: "rev-2",
-    author: "Ananya Verma",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 26, 2026",
-    title: "Mindblowing Unboxing & Crystal Clear Mic Quality!",
-    comment: "Attached a quick unboxing video showing the premium matte black finish and gold accents! Mic picks up voice crisp and clear during Zoom calls without background office noise.",
-    images: [
-      "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=500",
-      "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=500",
-    ],
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-    videoPoster: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600",
-    likes: 31,
-  },
-  {
-    id: "rev-3",
-    author: "Priya Patel",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 24, 2026",
-    title: "Super comfortable for long work hours and gym sessions!",
-    comment: "The ear cushions feel super soft and weightless. Even after 4-5 hours of continuous calls, my ears don't hurt. Delivery was super fast via Express Delivery (delivered next day!).",
-    images: [
-      "https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=500",
-    ],
-    likes: 18,
-  },
-  {
-    id: "rev-4",
-    author: "Sneha Roy",
-    avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 21, 2026",
-    title: "Stylish design and solid build quality!",
-    comment: "Made a short hands-on video review demonstrating the smooth swivel joints and easy touch controls. Highly recommended product for music lovers!",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    videoPoster: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600",
-    likes: 15,
-  },
-  {
-    id: "rev-5",
-    author: "Amit Kumar",
-    avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150",
-    verifiedBuyer: true,
-    rating: 4,
-    date: "July 19, 2026",
-    title: "Great product! Excellent packaging and official warranty card.",
-    comment: "Received package in pristine condition with 1-Year warranty card included. Active Noise Cancellation works like a charm in crowded coffee shops.",
-    images: [
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
-    ],
-    likes: 12,
-  },
-  {
-    id: "rev-6",
-    author: "Vikramaditya Singh",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    verifiedBuyer: true,
-    rating: 5,
-    date: "July 15, 2026",
-    title: "Exceptional battery backup for long travel journeys.",
-    comment: "Took this on a 14-hour flight and didn't even need to charge once. The headband padding feels custom-contoured for travel.",
-    images: [
-      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500",
-    ],
-    likes: 9,
-  },
-  {
-    id: "rev-7",
-    author: "Karan Malhotra",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-    verifiedBuyer: true,
-    rating: 4,
-    date: "July 11, 2026",
-    title: "Fast COD delivery and 100% authentic product.",
-    comment: "Selected Cash on Delivery and received it in 2 days via BlueDart courier. Authentic brand seal intact.",
-    images: [
-      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?w=500",
-    ],
-    likes: 7,
-  },
-];
-
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -279,9 +173,16 @@ export default function ProductDetailPage({ params }: PageProps) {
   }, [isSimilarHovered]);
 
   // Enhanced Customer Reviews State
-  const [reviewsList, setReviewsList] = useState<ProductReview[]>(
-    product.reviews && product.reviews.length > 0 ? product.reviews : sampleCustomerReviews
-  );
+  const [reviewsList, setReviewsList] = useState<ProductReview[]>([]);
+
+  useEffect(() => {
+    api<{ reviews: Array<ProductReview & { createdAt?: string }> }>(`/products/${resolvedParams.id}`)
+      .then(({ reviews }) => setReviewsList(reviews.map((review) => ({
+        ...review,
+        date: review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "",
+      }))))
+      .catch(() => setReviewsList([]));
+  }, [resolvedParams.id]);
   const [reviewMediaModal, setReviewMediaModal] = useState<{ type: "image" | "video"; url: string; title?: string } | null>(null);
   const [openAddReviewModal, setOpenAddReviewModal] = useState(false);
 
