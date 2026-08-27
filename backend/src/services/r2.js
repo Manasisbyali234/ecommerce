@@ -27,13 +27,8 @@ function missingConfiguration() {
 }
 
 export async function uploadR2Image({ folder, fileName, contentType, body }) {
-<<<<<<< HEAD
   if (!configured()) throw fail(503, `Cloudflare R2 is not configured: ${missingConfiguration()}`);
-  if (!["products", "banners"].includes(folder)) throw fail(400, "Invalid image folder");
-=======
-  if (!configured()) throw fail(503, "Cloudflare R2 is not configured");
   if (!["products", "banners", "categories", "sub-categories", "brands", "favicon"].includes(folder)) throw fail(400, "Invalid image folder");
->>>>>>> 6a90f320071b5ae05a9ef1e57fe043141cc80e11
   if (!contentType?.startsWith("image/")) throw fail(400, "Only image uploads are supported");
   if (!Buffer.isBuffer(body) || body.length === 0) throw fail(400, "An image file is required");
   if (body.length > 10 * 1024 * 1024) throw fail(400, "Image must be 10 MB or smaller");

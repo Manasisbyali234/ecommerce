@@ -1,0 +1,27 @@
+MongoDB connected
+API listening on http://localhost:5000
+[0mGET /health [32m200[0m 2.686 ms - 15[0m
+[0mGET /health [32m200[0m 0.489 ms - 15[0m
+[0mGET /api/v1/content/nav-categories [32m200[0m 33.685 ms - 12[0m
+[0mGET /api/v1/content/sub-categories [32m200[0m 41.200 ms - 12[0m
+[0mGET /api/v1/content/categories [32m200[0m 58.558 ms - 28878[0m
+[0mGET /api/v1/content/banners [32m200[0m 78.386 ms - 12[0m
+[0mGET /api/v1/content/sidebar-options [32m200[0m 52.116 ms - 12[0m
+[0mGET /api/v1/configuration/header [32m200[0m 52.484 ms - 27[0m
+[0mGET /api/v1/configuration/footer [32m200[0m 6.481 ms - 27[0m
+[0mGET /api/v1/configuration/theme [32m200[0m 7.374 ms - 26[0m
+[0mGET /api/v1/configuration/favicon [32m200[0m 20.636 ms - 28[0m
+[0mGET /api/v1/content/banners [32m200[0m 15.453 ms - 12[0m
+[0mGET /api/v1/content/sub-categories [32m200[0m 3.595 ms - 12[0m
+[0mGET /api/v1/content/categories [32m200[0m 18.161 ms - 28878[0m
+[0mGET /api/v1/products?limit=100 [32m200[0m 87.559 ms - 73636[0m
+[0mGET /api/v1/products?limit=100 [32m200[0m 72.864 ms - 73636[0m
+[0mGET /health [32m200[0m 0.239 ms - 15[0m
+[0mGET /api/v1/products?limit=10 [32m200[0m 6.071 ms - 73635[0m
+[0mGET /api/v1/content/banners [32m200[0m 2.408 ms - 12[0m
+[0mGET /api/v1/configuration/header [32m200[0m 1.882 ms - 27[0m
+[0mGET /api/v1/admin/dashboard [33m401[0m 3.091 ms - 38[0m
+[0mGET /api/v1/products?limit=1 [32m200[0m 5.112 ms - 72970[0m
+[0mGET /api/v1/products/ [32m200[0m 6.078 ms - 73635[0m
+[0mGET /api/v1/products?limit=1 [32m200[0m 7.220 ms - 72970[0m
+[0mGET /api/v1/products/6a85974a00f242078c23f61c [32m200[0m 19.984 ms - 72929[0m
