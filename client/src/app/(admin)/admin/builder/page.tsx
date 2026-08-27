@@ -52,6 +52,60 @@ export type PageSection = {
   alignment: "left" | "center" | "between";
 };
 
+const columnOptions = [1, 2, 3, 4, 6] as const;
+const gapOptions: Array<{ id: PageSection["gap"]; label: string }> = [
+  { id: "compact", label: "Compact (8px)" },
+  { id: "normal", label: "Standard (16px)" },
+  { id: "spacious", label: "Spacious (32px)" },
+];
+const paddingOptions: Array<{ id: PageSection["padding"]; label: string }> = [
+  { id: "compact", label: "Tight (16px)" },
+  { id: "normal", label: "Normal (32px)" },
+  { id: "spacious", label: "Tall (64px)" },
+];
+const widthOptions: Array<{ id: PageSection["containerWidth"]; label: string }> = [
+  { id: "full", label: "Full Bleed Width" },
+  { id: "standard", label: "Standard (1200px)" },
+  { id: "narrow", label: "Narrow (960px)" },
+];
+const alignmentOptions: Array<{ id: PageSection["alignment"]; label: string }> = [
+  { id: "left", label: "Left" },
+  { id: "center", label: "Center" },
+  { id: "between", label: "Spread" },
+];
+
+const getSectionPaddingClass = (padding: PageSection["padding"]) => {
+  if (padding === "spacious") return "px-6 py-16";
+  if (padding === "compact") return "px-3 py-4";
+  return "px-4 py-8";
+};
+
+const getSectionWidthClass = (width: PageSection["containerWidth"]) => {
+  if (width === "narrow") return "mx-auto w-[78%] max-w-[760px]";
+  if (width === "standard") return "mx-auto w-[92%] max-w-[1040px]";
+  return "w-full";
+};
+
+const getGridColumnsClass = (columns: PageSection["columns"]) => {
+  if (columns === 1) return "grid-cols-1";
+  if (columns === 2) return "grid-cols-1 sm:grid-cols-2";
+  if (columns === 3) return "grid-cols-1 sm:grid-cols-3";
+  if (columns === 4) return "grid-cols-2 sm:grid-cols-4";
+  return "grid-cols-3 sm:grid-cols-6";
+};
+
+const getGridGapClass = (gap: PageSection["gap"]) => {
+  if (gap === "compact") return "gap-2";
+  if (gap === "spacious") return "gap-8";
+  return "gap-4";
+};
+
+const getGridAlignmentClass = (alignment: PageSection["alignment"]) => {
+  if (alignment === "left") return "justify-items-start text-left";
+  if (alignment === "center") return "justify-items-center text-center";
+  return "justify-items-stretch text-left";
+};
+
 // Preset Initial Wireframe Sections
 const initialHomeSections: PageSection[] = [
   {
@@ -125,8 +179,30 @@ const initialHomeSections: PageSection[] = [
 export default function WireframeLayoutBuilder() {
   const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [sections, setSections] = useState<PageSection[]>(initialHomeSections);
-  useEffect(() => { api<{ setting: { value: { sections?: PageSection[] } } }>("/admin/settings/page-builder").then(({ setting }) => { if (setting.value.sections) setSections(setting.value.sections); }).catch(() => undefined); }, []);
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec-1");
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(initialHomeSections[0]?.id ?? null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    api<{ setting: { value: { sections?: PageSection[] } } }>("/admin/settings/page-builder")
+      .then(({ setting }) => {
+        const savedSections = setting.value.sections;
+
+        if (!isMounted || !Array.isArray(savedSections) || savedSections.length === 0) return;
+
+        setSections(savedSections);
+        setSelectedSectionId((currentId) =>
+          currentId && savedSections.some((section) => section.id === currentId)
+            ? currentId
+            : savedSections[0].id
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Drag and Drop States
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -167,8 +243,12 @@ export default function WireframeLayoutBuilder() {
 
   // Delete Section
   const deleteSection = (id: string) => {
-    setSections((prev) => prev.filter((s) => s.id !== id));
-    if (selectedSectionId === id) setSelectedSectionId(null);
+    const nextSections = sections.filter((s) => s.id !== id);
+
+    setSections(nextSections);
+    if (selectedSectionId === id) {
+      setSelectedSectionId(nextSections[0]?.id ?? null);
+    }
     toast.error("Section removed from layout");
   };
 
@@ -260,27 +340,31 @@ export default function WireframeLayoutBuilder() {
 
   // Preset Layout Templates
   const applyLayoutPreset = (preset: "default" | "high_density" | "minimal") => {
+    let nextSections: PageSection[] = initialHomeSections;
+
     if (preset === "default") {
-      setSections(initialHomeSections);
       toast.success("Applied Standard E-Commerce Wireframe Layout");
     } else if (preset === "high_density") {
-      setSections([
+      nextSections = [
         { id: "sec-p1", type: "promo_banner", title: "Top Announcement Strip", visible: true, columns: 1, gap: "compact", padding: "compact", containerWidth: "full", alignment: "center" },
         { id: "sec-p2", type: "category_grid", title: "Quick Category Strip", visible: true, columns: 6, gap: "compact", padding: "compact", containerWidth: "standard", alignment: "center" },
         { id: "sec-p3", type: "hero", title: "Main Carousel Hero", visible: true, columns: 2, gap: "normal", padding: "normal", containerWidth: "standard", alignment: "left" },
         { id: "sec-p4", type: "featured_products", title: "Flash Sale 4-Col Grid", visible: true, columns: 4, gap: "compact", padding: "normal", containerWidth: "standard", alignment: "between" },
         { id: "sec-p5", type: "featured_products", title: "Trending Items 4-Col Grid", visible: true, columns: 4, gap: "compact", padding: "normal", containerWidth: "standard", alignment: "between" },
         { id: "sec-p6", type: "trust_badges", title: "Guarantees Footer Strip", visible: true, columns: 4, gap: "compact", padding: "compact", containerWidth: "standard", alignment: "center" },
-      ]);
+      ];
       toast.success("Applied High-Density Catalog Layout");
     } else if (preset === "minimal") {
-      setSections([
+      nextSections = [
         { id: "sec-m1", type: "hero", title: "Minimal Hero Showcase", visible: true, columns: 1, gap: "spacious", padding: "spacious", containerWidth: "narrow", alignment: "center" },
         { id: "sec-m2", type: "feature_grid", title: "Core Features (3-Col)", visible: true, columns: 3, gap: "normal", padding: "normal", containerWidth: "standard", alignment: "center" },
         { id: "sec-m3", type: "featured_products", title: "Curated Grid (3-Col)", visible: true, columns: 3, gap: "normal", padding: "normal", containerWidth: "standard", alignment: "center" },
-      ]);
+      ];
       toast.success("Applied Minimalist Brand Showcase Layout");
     }
+
+    setSections(nextSections);
+    setSelectedSectionId(nextSections[0]?.id ?? null);
   };
 
   // Save Layout Config
@@ -322,6 +406,7 @@ export default function WireframeLayoutBuilder() {
             size="sm"
             onClick={() => {
               setSections(initialHomeSections);
+              setSelectedSectionId(initialHomeSections[0]?.id ?? null);
               toast.info("Layout reset to default");
             }}
             className="text-xs font-semibold gap-1.5"
@@ -521,7 +606,7 @@ export default function WireframeLayoutBuilder() {
                     <Columns className="h-3.5 w-3.5 text-amber-500" /> Grid Columns Count
                   </Label>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {([1, 2, 3, 4, 6] as const).map((col) => (
+                    {columnOptions.map((col) => (
                       <button
                         key={col}
                         onClick={() => updateSectionProp("columns", col)}
@@ -543,14 +628,10 @@ export default function WireframeLayoutBuilder() {
                     <Grid className="h-3.5 w-3.5 text-blue-500" /> Grid Item Gap / Spacing
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: "compact", label: "Compact (8px)" },
-                      { id: "normal", label: "Standard (16px)" },
-                      { id: "spacious", label: "Spacious (32px)" },
-                    ].map((g) => (
+                    {gapOptions.map((g) => (
                       <button
                         key={g.id}
-                        onClick={() => updateSectionProp("gap", g.id as any)}
+                        onClick={() => updateSectionProp("gap", g.id)}
                         className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
                           selectedSection.gap === g.id
                             ? "bg-blue-600 text-white border-blue-600 shadow-xs"
@@ -569,14 +650,10 @@ export default function WireframeLayoutBuilder() {
                     <Maximize2 className="h-3.5 w-3.5 text-emerald-500" /> Vertical Section Padding
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: "compact", label: "Tight (16px)" },
-                      { id: "normal", label: "Normal (32px)" },
-                      { id: "spacious", label: "Tall (64px)" },
-                    ].map((p) => (
+                    {paddingOptions.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => updateSectionProp("padding", p.id as any)}
+                        onClick={() => updateSectionProp("padding", p.id)}
                         className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
                           selectedSection.padding === p.id
                             ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
@@ -595,14 +672,10 @@ export default function WireframeLayoutBuilder() {
                     <Box className="h-3.5 w-3.5 text-purple-500" /> Container Width Boundary
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: "full", label: "Full Bleed Width" },
-                      { id: "standard", label: "Standard (1200px)" },
-                      { id: "narrow", label: "Narrow (960px)" },
-                    ].map((w) => (
+                    {widthOptions.map((w) => (
                       <button
                         key={w.id}
-                        onClick={() => updateSectionProp("containerWidth", w.id as any)}
+                        onClick={() => updateSectionProp("containerWidth", w.id)}
                         className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
                           selectedSection.containerWidth === w.id
                             ? "bg-purple-600 text-white border-purple-600 shadow-xs"
@@ -610,6 +683,28 @@ export default function WireframeLayoutBuilder() {
                         }`}
                       >
                         {w.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content Alignment */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold flex items-center gap-1.5 text-foreground">
+                    <Sliders className="h-3.5 w-3.5 text-slate-500" /> Content Alignment / Distribution
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {alignmentOptions.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => updateSectionProp("alignment", a.id)}
+                        className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                          selectedSection.alignment === a.id
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                            : "bg-muted/40 hover:bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {a.label}
                       </button>
                     ))}
                   </div>
@@ -753,7 +848,7 @@ export default function WireframeLayoutBuilder() {
                         onDragEnd={handleDragEnd}
                         onDrop={(e) => handleDrop(e, idx)}
                         onClick={() => setSelectedSectionId(sec.id)}
-                        className={`group relative rounded-xl border-2 transition-all cursor-pointer ${
+                        className={`group relative rounded-xl border-2 transition-all cursor-pointer ${getSectionWidthClass(sec.containerWidth)} ${
                           !sec.visible ? "opacity-40 border-slate-200 bg-slate-100" : "bg-white shadow-xs"
                         } ${
                           isSelected
@@ -761,13 +856,7 @@ export default function WireframeLayoutBuilder() {
                             : "border-slate-200 hover:border-slate-400"
                         } ${isDragging ? "opacity-30 border-dashed border-amber-400" : ""} ${
                           isDragOver ? "border-amber-500 border-2 bg-amber-50 scale-[1.01]" : ""
-                        } ${
-                          sec.padding === "spacious"
-                            ? "p-6"
-                            : sec.padding === "compact"
-                            ? "p-3"
-                            : "p-4"
-                        }`}
+                        } ${getSectionPaddingClass(sec.padding)}`}
                       >
                         {/* Section Wireframe Header Bar */}
                         <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 gap-2 flex-wrap">
@@ -841,23 +930,7 @@ export default function WireframeLayoutBuilder() {
 
                         {/* SECTION WIREFRAME LAYOUT CONTENT BLUEPRINT (LIGHT THEME) */}
                         <div
-                          className={`grid ${
-                            sec.columns === 1
-                              ? "grid-cols-1"
-                              : sec.columns === 2
-                              ? "grid-cols-1 sm:grid-cols-2"
-                              : sec.columns === 3
-                              ? "grid-cols-1 sm:grid-cols-3"
-                              : sec.columns === 4
-                              ? "grid-cols-2 sm:grid-cols-4"
-                              : "grid-cols-3 sm:grid-cols-6"
-                          } ${
-                            sec.gap === "compact"
-                              ? "gap-2"
-                              : sec.gap === "spacious"
-                              ? "gap-6"
-                              : "gap-3"
-                          }`}
+                          className={`grid ${getGridColumnsClass(sec.columns)} ${getGridGapClass(sec.gap)} ${getGridAlignmentClass(sec.alignment)}`}
                         >
                           {/* HERO WIREFRAME BLUEPRINT */}
                           {sec.type === "hero" && (

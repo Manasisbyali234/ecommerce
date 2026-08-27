@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-import { products, revenueSeries, formatCurrency, type Order } from "@/lib/mock-data";
+import { formatCurrency, type Order } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 
@@ -57,29 +57,13 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 // Device distribution data
-const deviceDistributionData = [
-  { name: "Mobile App / Web", value: 58, color: "#3b82f6" },
-  { name: "Desktop Web", value: 36, color: "#f59e0b" },
-  { name: "Tablet", value: 6, color: "#10b981" },
-];
+const deviceDistributionData: Array<{ name: string; value: number; color: string }> = [];
 
 // Traffic acquisition sources data
-const trafficSourcesData = [
-  { source: "Organic Google Search", visitors: "14,200", revenue: 84000, conversion: "4.2%" },
-  { source: "Instagram & FB Ads", visitors: "9,800", revenue: 62000, conversion: "3.8%" },
-  { source: "Direct Store Traffic", visitors: "8,400", revenue: 51000, conversion: "3.5%" },
-  { source: "Email Newsletters", visitors: "4,100", revenue: 28000, conversion: "5.1%" },
-  { source: "Affiliate & Influencers", visitors: "2,900", revenue: 19000, conversion: "3.1%" },
-];
+const trafficSourcesData: Array<{ source: string; visitors: string; revenue: number; conversion: string }> = [];
 
 // Top regional sales cities
-const topRegionsData = [
-  { city: "Mumbai, MH", sales: 74000, share: "28%" },
-  { city: "Bengaluru, KA", sales: 62000, share: "24%" },
-  { city: "Delhi NCR", sales: 58000, share: "22%" },
-  { city: "Hyderabad, TS", sales: 34000, share: "14%" },
-  { city: "Chennai, TN", sales: 26000, share: "12%" },
-];
+const topRegionsData: Array<{ city: string; sales: number; share: string }> = [];
 
 export default function AnalyticsPage() {
   const orders = useStore((s) => s.orders);
@@ -89,7 +73,14 @@ export default function AnalyticsPage() {
 
   useEffect(() => { api<{ revenue: number; averageOrderValue: number; orderCount: number; newCustomers: number; topProducts: Array<{ name: string; revenue: number }> }>("/admin/analytics").then(setAnalytics).catch(() => toast.error("Unable to load analytics")); }, []);
 
-  const revenueByDay = revenueSeries;
+  const revenueByDay = useMemo(() => {
+    const dailyRevenue = new Map<string, number>();
+    for (const order of orders) {
+      const day = order.date || "Unknown";
+      dailyRevenue.set(day, (dailyRevenue.get(day) || 0) + order.total);
+    }
+    return Array.from(dailyRevenue, ([day, revenue]) => ({ day, revenue })).slice(-7);
+  }, [orders]);
 
   const ordersByStatus = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -101,31 +92,15 @@ export default function AnalyticsPage() {
     }));
   }, [orders]);
 
-  const calculatedTopProducts = useMemo(() => {
-    const active = products.filter((p) => p.status === "active");
-    const revenue = new Map<string, number>();
-    orders.forEach((o, oi) => {
-      const itemCount = typeof o.items === "number" ? o.items : Array.isArray(o.items) ? o.items.length : 1;
-      const share = o.total / Math.max(1, itemCount);
-      for (let i = 0; i < itemCount; i++) {
-        const p = active[(oi + i) % active.length];
-        revenue.set(p.name, (revenue.get(p.name) ?? 0) + share);
-      }
-    });
-    return Array.from(revenue.entries())
-      .map(([name, value]) => ({ name, value: Math.round(value) }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-  }, [orders]);
-  const topProducts = analytics?.topProducts.map((product) => ({ name: product.name, value: product.revenue })) || calculatedTopProducts;
+  const topProducts = analytics?.topProducts.map((product) => ({ name: product.name, value: product.revenue })) || [];
 
   const kpis = {
-    revenue: analytics?.revenue ?? (revenueSeries.reduce((a, b) => a + b.revenue, 0) + orders.reduce((a, b) => a + b.total, 0)),
+    revenue: analytics?.revenue ?? 0,
     orders: analytics?.orderCount ?? orders.length,
     aov: analytics?.averageOrderValue ?? (orders.length > 0 ? orders.reduce((a, b) => a + b.total, 0) / orders.length : 0),
-    conversion: 3.84,
-    abandonment: 24.2,
-    clv: 8450,
+    conversion: 0,
+    abandonment: 0,
+    clv: 0,
   };
 
   const exportReport = () => {

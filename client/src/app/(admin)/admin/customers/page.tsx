@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   Mail,
@@ -55,6 +55,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { formatCurrency, type Order, type OrderItem } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { api } from "@/lib/api";
 
 const statusColor: Record<Order["status"], string> = {
   pending: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
@@ -87,15 +88,13 @@ function evaluateCustomerTier(totalSpent: number, orderCount: number, tiers: any
   return sorted[sorted.length - 1]?.name || "Regular";
 }
 
-function buildCustomers(orders: Order[], tiers: any[]): Customer[] {
+type CustomerRecord = { fullName?: string; email?: string; phone?: string; addresses?: Array<{ city?: string; state?: string }> };
+
+function buildCustomers(orders: Order[], tiers: any[], customerRecords: CustomerRecord[]): Customer[] {
   const map = new Map<string, Customer>();
+  const customersByEmail = new Map(customerRecords.filter((customer) => customer.email).map((customer) => [customer.email!.toLowerCase(), customer]));
 
-  // Sample locations for demo
-  const sampleLocations = ["Mumbai, MH", "Bengaluru, KA", "Delhi NCR", "Hyderabad, TS", "Chennai, TN", "Pune, MH"];
-  const samplePhones = ["+91 98765 43210", "+91 98123 45678", "+91 97111 22334", "+91 96500 11223"];
-
-  for (let idx = 0; idx < orders.length; idx++) {
-    const o = orders[idx];
+  for (const o of orders) {
     const key = o.email;
     const existing = map.get(key);
 
@@ -108,11 +107,13 @@ function buildCustomers(orders: Order[], tiers: any[]): Customer[] {
     } else {
       const totalSpent = o.total;
       const tier = evaluateCustomerTier(totalSpent, 1, tiers);
+      const record = customersByEmail.get(key.toLowerCase());
+      const address = record?.addresses?.[0];
       map.set(key, {
         name: o.customer,
         email: o.email,
-        phone: samplePhones[idx % samplePhones.length],
-        location: sampleLocations[idx % sampleLocations.length],
+        phone: record?.phone,
+        location: [address?.city, address?.state].filter(Boolean).join(", ") || undefined,
         orderCount: 1,
         totalSpent: totalSpent,
         lastOrder: o.date,
@@ -120,6 +121,12 @@ function buildCustomers(orders: Order[], tiers: any[]): Customer[] {
         tier,
       });
     }
+  }
+
+  for (const record of customerRecords) {
+    if (!record.email || map.has(record.email)) continue;
+    const address = record.addresses?.[0];
+    map.set(record.email, { name: record.fullName || "Customer", email: record.email, phone: record.phone, location: [address?.city, address?.state].filter(Boolean).join(", ") || undefined, orderCount: 0, totalSpent: 0, lastOrder: "", orders: [], tier: evaluateCustomerTier(0, 0, tiers) });
   }
 
   return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
@@ -137,7 +144,9 @@ function initials(name: string) {
 export default function CustomersPage() {
   const orders = useStore((s) => s.orders);
   const customerTiers = useStore((s) => s.customerTiers);
-  const customers = useMemo(() => buildCustomers(orders, customerTiers), [orders, customerTiers]);
+  const [customerRecords, setCustomerRecords] = useState<CustomerRecord[]>([]);
+  useEffect(() => { api<{ items: CustomerRecord[] }>("/admin/customers").then(({ items }) => setCustomerRecords(items)).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load customers")); }, []);
+  const customers = useMemo(() => buildCustomers(orders, customerTiers, customerRecords), [orders, customerTiers, customerRecords]);
   const [q, setQ] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -168,16 +177,23 @@ export default function CustomersPage() {
     vipCount: customers.filter((c) => c.tier === "VIP Platinum").length,
   };
 
-  const handleAddCustomer = () => {
+  const handleAddCustomer = async () => {
     if (!newCustName || !newCustEmail) {
       toast.error("Name and Email are required");
       return;
     }
-    toast.success(`Customer ${newCustName} created successfully!`);
-    setOpenNewDialog(false);
-    setNewCustName("");
-    setNewCustEmail("");
-    setNewCustPhone("");
+    try {
+      await api("/admin/customers", { method: "POST", body: JSON.stringify({ fullName: newCustName, email: newCustEmail, phone: newCustPhone.replace(/\D/g, "") || undefined }) });
+      const { items } = await api<{ items: CustomerRecord[] }>("/admin/customers");
+      setCustomerRecords(items);
+      toast.success(`Customer ${newCustName} created successfully!`);
+      setOpenNewDialog(false);
+      setNewCustName("");
+      setNewCustEmail("");
+      setNewCustPhone("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to create customer");
+    }
   };
 
   const exportCustomersCsv = () => {

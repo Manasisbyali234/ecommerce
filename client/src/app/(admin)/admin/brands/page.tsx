@@ -141,13 +141,12 @@ export default function AdminBrandsPage() {
       .then(({ items }) =>
         setBrands(
           items.map((item) => ({
-            slug: "",
-            description: "",
-            logo: "",
-            featured: false,
-            ...(item.data ?? {}),
             id: item.id,
             name: item.data?.name || item.title,
+            slug: item.data?.slug || "",
+            description: item.data?.description || "",
+            logo: item.data?.logo || "",
+            featured: item.data?.featured || false,
             active: item.active,
           }))
         )

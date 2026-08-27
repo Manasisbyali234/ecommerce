@@ -84,7 +84,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { products as seed, formatCurrency, defaultAdditionalInfo, type Product, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
+import { formatCurrency, defaultAdditionalInfo, type Product, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
 import { api, uploadImage } from "@/lib/api";
 
 const defaultAboutSections: AboutProductSection[] = [

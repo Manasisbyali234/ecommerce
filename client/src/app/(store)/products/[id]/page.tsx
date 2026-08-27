@@ -96,7 +96,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
   // Find product by ID
   const product: Product =
-    products.find((p) => p.id === resolvedParams.id) || products[0] || loadingProduct;
+    products.find((p) => p.id === resolvedParams.id) || loadingProduct;
 
   const galleryImages = (product.images && product.images.length > 0
     ? product.images

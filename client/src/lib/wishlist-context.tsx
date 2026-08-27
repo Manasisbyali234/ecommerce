@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { products, type Product } from "./mock-data";
+import type { Product } from "./mock-data";
 import { toast } from "sonner";
 import { api, getAccessToken } from "./api";
 
@@ -26,18 +26,17 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleWishlist = async (productId: string, productName?: string) => {
-    if (getAccessToken()) {
-      try {
-        const { saved } = await api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" });
-        if (saved) {
-          const product = await api<{ product: Product }>(`/products/${productId}`);
-          setWishlistProducts((items) => [...items.filter((item) => item.id !== productId), product.product]);
-        } else setWishlistProducts((items) => items.filter((item) => item.id !== productId));
-      } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update wishlist"); return; }
-    }
+    if (!getAccessToken()) { toast.error("Please sign in to save products to your wishlist"); return; }
+    try {
+      const { saved } = await api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" });
+      if (saved) {
+        const product = await api<{ product: Product }>(`/products/${productId}`);
+        setWishlistProducts((items) => [...items.filter((item) => item.id !== productId), product.product]);
+      } else setWishlistProducts((items) => items.filter((item) => item.id !== productId));
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update wishlist"); return; }
     setWishlist((prev) => {
       const isSaved = prev.includes(productId);
-      const targetName = productName || products.find((p) => p.id === productId)?.name || "Product";
+      const targetName = productName || "Product";
       if (isSaved) {
         toast.info(`Removed ${targetName} from Wishlist`);
         return prev.filter((id) => id !== productId);
@@ -57,13 +56,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     toast.info("Wishlist cleared");
   };
 
-  const displayedWishlistProducts = getAccessToken() ? wishlistProducts : products.filter((p) => wishlist.includes(p.id));
-
   return (
     <WishlistContext.Provider
       value={{
         wishlist,
-        wishlistProducts: displayedWishlistProducts,
+        wishlistProducts,
         toggleWishlist,
         isInWishlist,
         clearWishlist,

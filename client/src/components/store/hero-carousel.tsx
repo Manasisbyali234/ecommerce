@@ -11,8 +11,9 @@ import {
 import { toast } from "sonner";
 import { useStore, type Banner } from "@/lib/store";
 import { api } from "@/lib/api";
-import { products, formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/mock-data";
 import { useCart } from "@/lib/cart-context";
+import { useProducts } from "@/hooks/use-products";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 const getFontFamilyClass = (family?: string) => {
@@ -49,6 +50,7 @@ export function HeroCarousel() {
   const [allBanners, setAllBanners] = useState<Banner[]>(fallbackBanners);
   const coupons = useStore((s) => s.coupons.filter((c) => c.active));
   const { addItem } = useCart();
+  const products = useProducts();
 
   useEffect(() => {
     api<{ items: Array<{ id: string; title: string; active: boolean; data: Omit<Banner, "id"> }> }>("/content/banners")
@@ -85,6 +87,7 @@ export function HeroCarousel() {
         p.name.toLowerCase().includes(currentBanner.title.toLowerCase().split(" ")[0])
       ) || products[0];
 
+    if (!matched) { toast.error("This promotion does not have an available product"); return; }
     addItem(matched, 1);
     toast.success(`Added ${matched.name} to cart`, {
       description: `${formatCurrency(matched.price)} · Added to shopping bag`,

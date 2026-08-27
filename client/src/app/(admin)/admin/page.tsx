@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -90,9 +90,10 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { orders, products, revenueSeries, formatCurrency, type Order } from "@/lib/mock-data";
+import { formatCurrency, type Order, type Product } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 type TimelineFilter = "today" | "week" | "month" | "year" | "custom_date" | "custom_month" | "custom_year";
 
@@ -272,6 +273,8 @@ const baseCategoryStatsData = [
 export default function AdminDashboardPage() {
   const router = useRouter();
   const currentOrders = useStore((s) => s.orders);
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => { api<{ items: Product[] }>("/admin/products").then(({ items }) => setProducts(items)).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load products")); }, []);
 
   // Timeline Filter State
   const [timeline, setTimeline] = useState<TimelineFilter>("week");
@@ -341,43 +344,13 @@ export default function AdminDashboardPage() {
 
   // Dynamic Chart Revenue Series based on Timeline or Custom Filters
   const currentRevenueSeries = useMemo(() => {
-    if (timeline === "today" || timeline === "week" || timeline === "month" || timeline === "year") {
-      return presetRevenueSeries[timeline];
-    }
-
-    if (timeline === "custom_date") {
-      return [
-        { day: `${startDate.slice(5)}`, revenue: 14500 },
-        { day: "Mid-Period", revenue: 22800 },
-        { day: `${endDate.slice(5)}`, revenue: 31200 },
-      ];
-    }
-
-    if (timeline === "custom_month") {
-      const mObj = monthOptions.find((m) => m.value === selectedMonth);
-      const name = mObj ? mObj.label.slice(0, 3) : "M";
-      return [
-        { day: `${name} W1`, revenue: 84000 },
-        { day: `${name} W2`, revenue: 102000 },
-        { day: `${name} W3`, revenue: 125000 },
-        { day: `${name} W4`, revenue: 138000 },
-      ];
-    }
-
-    if (timeline === "custom_year") {
-      return [
-        { day: "Q1", revenue: 1250000 },
-        { day: "Q2", revenue: 1480000 },
-        { day: "Q3", revenue: 1690000 },
-        { day: "Q4", revenue: 1950000 },
-      ];
-    }
-
-    return presetRevenueSeries.week;
-  }, [timeline, startDate, endDate, selectedMonth]);
+    const revenueByDay = new Map<string, number>();
+    currentOrders.forEach((order) => revenueByDay.set(order.date || "Unknown", (revenueByDay.get(order.date || "Unknown") || 0) + order.total));
+    return Array.from(revenueByDay, ([day, revenue]) => ({ day, revenue })).slice(-12);
+  }, [currentOrders]);
 
   // Dynamic Overall KPI Stats computed according to Timeline / Custom Range
-  const stats = useMemo(() => {
+  const mockStats = useMemo(() => {
     switch (timeline) {
       case "today":
         return [
@@ -664,9 +637,28 @@ export default function AdminDashboardPage() {
     }
   }, [timeline, startDate, endDate, selectedMonth, selectedMonthYear, selectedYear]);
 
+  const stats = useMemo(() => {
+    const revenue = currentOrders.reduce((total, order) => total + order.total, 0);
+    const completed = currentOrders.filter((order) => order.status === "delivered").length;
+    return [
+      { label: "Total Revenue", value: formatCurrency(revenue), icon: IndianRupee, delta: "", color: "text-emerald-500", bg: "bg-emerald-500/10", periodText: "from database orders" },
+      { label: "Total Orders", value: String(currentOrders.length), icon: ShoppingCart, delta: "", color: "text-blue-500", bg: "bg-blue-500/10", periodText: "from database orders" },
+      { label: "Avg Order Value (AOV)", value: formatCurrency(currentOrders.length ? revenue / currentOrders.length : 0), icon: Package, delta: "", color: "text-purple-500", bg: "bg-purple-500/10", periodText: "from database orders" },
+      { label: "Delivered Orders", value: String(completed), icon: TrendingUp, delta: "", color: "text-amber-500", bg: "bg-amber-500/10", periodText: "from database orders" },
+    ];
+  }, [currentOrders]);
+
   // Filtered Category Stats list
   const filteredCategoryStats = useMemo(() => {
-    return baseCategoryStatsData.filter((cat) => {
+    const categories = Array.from(new Set(products.map((product) => product.category).filter(Boolean))).map((category) => {
+      const categoryProducts = products.filter((product) => product.category === category);
+      const productIds = new Set(categoryProducts.map((product) => product.id));
+      const categoryLines = currentOrders.flatMap((order) => Array.isArray(order.items) ? order.items.filter((item) => productIds.has(item.id)) : []);
+      const categoryRevenue = categoryLines.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const metrics = { revenue: categoryRevenue, orders: categoryLines.reduce((sum, item) => sum + item.qty, 0), delta: "", share: 0 };
+      return { id: category, name: category, categoryKey: category, icon: Layers, color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20", topProduct: categoryProducts[0]?.name || "—", activeProducts: categoryProducts.filter((product) => product.status === "active").length, metrics: { today: metrics, week: metrics, month: metrics, year: metrics } };
+    });
+    return categories.filter((cat) => {
       const matchQ =
         !categoryQuery ||
         cat.name.toLowerCase().includes(categoryQuery.toLowerCase()) ||
@@ -676,7 +668,7 @@ export default function AdminDashboardPage() {
         selectedCategoryFilter === "all" || cat.categoryKey === selectedCategoryFilter;
       return matchQ && matchCat;
     });
-  }, [categoryQuery, selectedCategoryFilter]);
+  }, [products, currentOrders, categoryQuery, selectedCategoryFilter]);
 
   // Helper to extract category metric based on active timeline filter
   const getCategoryMetric = (cat: typeof baseCategoryStatsData[0]) => {

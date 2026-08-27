@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { products, type Product } from "./mock-data";
+import type { Product } from "./mock-data";
 import { api, getAccessToken } from "./api";
+import { toast } from "sonner";
 
 export type CartItem = {
   product: Product;
@@ -28,7 +29,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Load the authenticated customer cart; retain demo data only while offline/unauthenticated.
+  // A cart is always backed by the authenticated customer's database record.
   useEffect(() => {
     if (getAccessToken()) {
       api<{ cart: { items: Array<{ product: Product; quantity: number }> } }>("/cart")
@@ -36,15 +37,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         .catch(() => setItems([]));
       return;
     }
-    const seedProduct1 = products.find((p) => p.id === "P-1001");
-    const seedProduct3 = products.find((p) => p.id === "P-1003");
-    const initial: CartItem[] = [];
-    if (seedProduct1) initial.push({ product: seedProduct1, quantity: 1 });
-    if (seedProduct3) initial.push({ product: seedProduct3, quantity: 2 });
-    setItems(initial);
+    setItems([]);
   }, []);
 
   const addItem = (product: Product, quantity = 1) => {
+    if (!getAccessToken()) {
+      toast.error("Please sign in to add items to your cart");
+      return;
+    }
     const normalizedProduct = { ...product, id: (product as any)._id ?? product.id };
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => i.product.id === normalizedProduct.id);
@@ -54,10 +54,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ...next[existingIndex],
           quantity: next[existingIndex].quantity + quantity,
         };
-        if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity: next[existingIndex].quantity }) }).catch(() => undefined);
+        api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity: next[existingIndex].quantity }) }).catch(() => undefined);
         return next;
       }
-      if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity }) }).catch(() => undefined);
+      api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity }) }).catch(() => undefined);
       return [...prev, { product: normalizedProduct, quantity }];
     });
     setIsOpen(true);
