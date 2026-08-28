@@ -53,8 +53,16 @@ async function shiprocketToken() {
   return data.token;
 }
 
-export async function createCarrierLabel(order) {
-  if (env.carrierProvider !== "shiprocket") throw fail(503, "No supported carrier integration is configured");
+export function createManualCarrierLabel(order, options = {}) {
+  const carrier = String(options.carrier || "Manual Courier").trim();
+  const tracking = String(options.tracking || `MMZ${Date.now().toString().slice(-8)}${crypto.randomBytes(2).toString("hex").toUpperCase()}`).trim();
+  if (!carrier) throw fail(400, "Courier partner is required");
+  if (!tracking) throw fail(400, "AWB tracking number is required");
+  return { carrier, tracking, status: "label_created", labelUrl: "", raw: { provider: "manual", orderId: order.id } };
+}
+
+export async function createCarrierLabel(order, options = {}) {
+  if (options.manual || env.carrierProvider !== "shiprocket") return createManualCarrierLabel(order, options);
   const token = await shiprocketToken();
   const address = order.shippingAddress;
   if (!address?.street || !address?.pincode) throw fail(400, "Order requires a complete shipping address");
