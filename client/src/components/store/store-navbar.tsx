@@ -466,9 +466,9 @@ export function StoreNavbar() {
 
       {/* ALL CATEGORIES & SUBCATEGORIES HAMBURGER SIDE DRAWER */}
       <Sheet open={allCategoriesDrawerOpen} onOpenChange={setAllCategoriesDrawerOpen}>
-        <SheetContent side="left" className="w-80 sm:w-96 p-0 overflow-y-auto bg-background">
+        <SheetContent side="left" className="w-80 sm:w-96 p-0 overflow-y-auto bg-background [&>button]:top-3 [&>button]:right-3 [&>button]:z-10 [&>button]:rounded-md [&>button]:bg-white/15 [&>button]:p-1 [&>button]:opacity-100 [&>button]:text-white [&>button:hover]:bg-white/25">
           {/* Drawer Top Header Banner */}
-          <div className="bg-[#232f3e] text-white p-4 flex items-center justify-between">
+          <div className="bg-[#232f3e] text-white pt-10 pb-4 px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-slate-700/80 flex items-center justify-center text-white font-bold">
                 <User className="h-5 w-5" />

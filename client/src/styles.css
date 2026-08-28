@@ -142,6 +142,34 @@
   }
 }
 
+/* Shared uniform style for all Order Status dropdown options */
+.status-select-item {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.status-select-item:hover,
+.status-select-item[data-highlighted] {
+  background-color: oklch(0.93 0.02 255) !important;
+  color: oklch(0.2 0.04 265) !important;
+}
+
+.dark .status-select-item:hover,
+.dark .status-select-item[data-highlighted] {
+  background-color: oklch(0.28 0.04 260) !important;
+  color: oklch(0.98 0.003 248) !important;
+}
+
+.status-select-item[data-state="checked"] {
+  background-color: oklch(0.93 0.02 255) !important;
+  color: oklch(0.2 0.04 265) !important;
+  font-weight: 600;
+}
+
+.dark .status-select-item[data-state="checked"] {
+  background-color: oklch(0.28 0.04 260) !important;
+  color: oklch(0.98 0.003 248) !important;
+}
+
 /* Custom Soft & Smooth Card Box Shadows Across All Pages */
 .shadow-sm {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.03) !important;
