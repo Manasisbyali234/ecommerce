@@ -179,7 +179,8 @@ export default function StorefrontCheckoutPage() {
     try {
       let address: CustomerAddress | Omit<CustomerAddress, "id">;
       if (isAddingCustomAddress) {
-        address = { fullName: customAddress.name, phone: customAddress.phone, street: customAddress.street, city: customAddress.city, state: customAddress.state, pincode: customAddress.pincode, type: "Home", isDefault: savedAddresses.length === 0 };
+        const normalizedPhone = customAddress.phone.replace(/\D/g, "").slice(-10);
+        address = { fullName: customAddress.name, phone: normalizedPhone, street: customAddress.street, city: customAddress.city, state: customAddress.state, pincode: customAddress.pincode, type: "Home", isDefault: savedAddresses.length === 0 };
         const saved = await api<{ addresses: CustomerAddress[] }>("/me/addresses", { method: "POST", body: JSON.stringify(address) });
         address = saved.addresses.find((item) => item.isDefault) || saved.addresses[saved.addresses.length - 1] || address;
       } else {
@@ -280,13 +281,13 @@ export default function StorefrontCheckoutPage() {
                   <div className="space-y-4">
                     {/* Cart Items List */}
                     <div className="divide-y rounded-xl border">
-                      {items.map((item) => {
+                      {items.map((item, index) => {
                         const mrp = item.product.originalPrice || Math.round(item.product.price * 1.28);
                         const discountPercent = Math.round(((mrp - item.product.price) / mrp) * 100);
 
                         return (
                           <div
-                            key={item.product.id}
+                            key={item.product.id ?? index}
                             className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 hover:bg-muted/10 transition-colors"
                           >
                             <div className="flex items-center gap-4">

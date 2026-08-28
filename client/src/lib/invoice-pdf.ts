@@ -34,7 +34,18 @@ export function buildInvoicePdf(
   doc.line(48, y, w - 48, y);
   y += 24;
 
-  // Bill to + meta
+  // Fixed 3-column layout for order meta (right half of page)
+  // Page width ~595pt, margin 48pt each side → content 499pt
+  // Left half (0–248) reserved for Billed To
+  // Right half split: Order ID 130pt | Issued 90pt | Due 90pt
+  const META_ORDER_X  = 248;   // Order ID col start
+  const META_ORDER_W  = 120;   // strict max width for Order ID
+  const META_ISSUED_X = 378;   // = 248 + 120 + 10 gap
+  const META_ISSUED_W = 80;
+  const META_DUE_X    = 468;   // = 378 + 80 + 10 gap
+  const META_DUE_W    = 75;
+
+  // Bill to
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text("Billed To", 48, y);
@@ -42,14 +53,27 @@ export function buildInvoicePdf(
   doc.text(invoice.customer, 48, y + 16);
   if (email) doc.text(email, 48, y + 30);
 
+  // Order meta headers
   doc.setFont("helvetica", "bold");
-  doc.text("Order ID", w - 240, y);
-  doc.text("Issued", w - 160, y);
-  doc.text("Due", w - 80, y);
+  doc.setFontSize(10);
+  doc.text("Order ID", META_ORDER_X,  y);
+  doc.text("Issued",   META_ISSUED_X, y);
+  doc.text("Due",      META_DUE_X,    y);
+
+  // Order meta values — Order ID truncated to strict column width
   doc.setFont("helvetica", "normal");
-  doc.text(invoice.orderId, w - 240, y + 16);
-  doc.text(invoice.issued, w - 160, y + 16);
-  doc.text(invoice.due, w - 80, y + 16);
+  doc.setFontSize(9);
+  const rawOrderId = invoice.orderId || "";
+  let displayOrderId = rawOrderId;
+  if (doc.getTextWidth(displayOrderId) > META_ORDER_W) {
+    while (doc.getTextWidth(displayOrderId + "...") > META_ORDER_W && displayOrderId.length > 0) {
+      displayOrderId = displayOrderId.slice(0, -1);
+    }
+    displayOrderId += "...";
+  }
+  doc.text(displayOrderId,  META_ORDER_X,  y + 14);
+  doc.text(invoice.issued,  META_ISSUED_X, y + 14);
+  doc.text(invoice.due,     META_DUE_X,    y + 14);
 
   y += 60;
 
@@ -66,15 +90,23 @@ export function buildInvoicePdf(
   y += 26;
   doc.setFont("helvetica", "normal");
 
+  // Line item column X positions (fixed)
+  const ITEM_DESC_X   = 56;
+  const ITEM_DESC_W   = w - 96 - 180; // description max width
+  const ITEM_QTY_X    = w - 220;
+  const ITEM_PRICE_X  = w - 140;
+  const ITEM_AMT_X    = w - 56;
+
   const itemCount = typeof order?.items === "number" ? order.items : Array.isArray(order?.items) ? order.items.length : 1;
   const unit = invoice.amount / Math.max(1, itemCount);
   for (let i = 0; i < itemCount; i++) {
-    const itemTitle = Array.isArray(order?.items) && order.items[i]?.title ? order.items[i].title : `Order ${invoice.orderId} — Item ${i + 1}`;
-    doc.text(itemTitle, 56, y);
-    doc.text(String(1), w - 220, y, { align: "right" });
-    doc.text(`Rs. ${unit.toFixed(2)}`, w - 140, y, { align: "right" });
-    doc.text(`Rs. ${unit.toFixed(2)}`, w - 56, y, { align: "right" });
-    y += 20;
+    const rawTitle = Array.isArray(order?.items) && order.items[i]?.title ? order.items[i].title : `Order ${invoice.orderId} — Item ${i + 1}`;
+    const titleLines = doc.splitTextToSize(rawTitle, ITEM_DESC_W);
+    doc.text(titleLines,                          ITEM_DESC_X,  y);
+    doc.text(String(1),                           ITEM_QTY_X,   y, { align: "right" });
+    doc.text(`Rs. ${unit.toFixed(2)}`,            ITEM_PRICE_X, y, { align: "right" });
+    doc.text(`Rs. ${unit.toFixed(2)}`,            ITEM_AMT_X,   y, { align: "right" });
+    y += Math.max(20, titleLines.length * 14);
   }
 
   y += 12;
@@ -96,7 +128,7 @@ export function buildInvoicePdf(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.text("Grand Total", w - 200, y);
-  doc.text(`Rs. ${invoice.amount.toFixed(2)}`, w - 56, y, { align: "right" });
+  doc.text(`Rs. ${invoice.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, w - 56, y, { align: "right" });
 
   y += 50;
   doc.setFont("helvetica", "normal");
