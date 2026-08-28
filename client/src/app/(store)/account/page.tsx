@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useStore, store, type CustomerAddress, type CustomerProfile, type Order } from "@/lib/store";
+import { useStore, store, hydrateCustomerStore, type CustomerAddress, type CustomerProfile, type Order } from "@/lib/store";
 import { useWishlist } from "@/lib/wishlist-context";
 import { useCart } from "@/lib/cart-context";
 import { formatCurrency } from "@/lib/mock-data";
@@ -98,6 +98,13 @@ export default function CustomerAccountDashboardPage() {
   const { addItem, openCart } = useCart();
 
   const [activeTab, setActiveTab] = useState<"profile" | "orders" | "addresses" | "wishlist">("orders");
+
+  // Refresh orders from backend every 30s so status changes by admin are reflected
+  useEffect(() => {
+    hydrateCustomerStore().catch(() => undefined);
+    const interval = setInterval(() => hydrateCustomerStore().catch(() => undefined), 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Order filters
   const [orderSearch, setOrderSearch] = useState("");

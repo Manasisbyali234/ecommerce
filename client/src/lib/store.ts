@@ -1250,6 +1250,12 @@ export const store = {
   updateOrder(id: string, patch: Partial<Order>) {
     state.orders = state.orders.map((o) => (o.id === id ? { ...o, ...patch } : o));
     emit();
+    const backendPatch: Record<string, unknown> = {};
+    if (patch.status) backendPatch.status = patch.status;
+    if (patch.paymentStatus) backendPatch.paymentStatus = patch.paymentStatus;
+    if (Object.keys(backendPatch).length) {
+      api(`/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify(backendPatch) }).catch(() => undefined);
+    }
   },
 
   addOrder(o: Order) {
