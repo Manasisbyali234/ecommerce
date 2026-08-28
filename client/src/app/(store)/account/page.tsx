@@ -46,7 +46,7 @@ import { useWishlist } from "@/lib/wishlist-context";
 import { useCart } from "@/lib/cart-context";
 import { formatCurrency } from "@/lib/mock-data";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
-import { clearAccessToken } from "@/lib/api";
+import { api, clearAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -170,6 +170,7 @@ export default function CustomerAccountDashboardPage() {
   // DELETE ACCOUNT & LOGOUT STATE
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleLogout = () => {
     clearAccessToken();
@@ -179,17 +180,28 @@ export default function CustomerAccountDashboardPage() {
     router.push("/");
   };
 
-  const handleDeleteAccount = (e: React.FormEvent) => {
+  const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (deleteConfirmText !== "DELETE") {
+    const confirmation = deleteConfirmText.trim().toUpperCase();
+    if (confirmation !== "DELETE") {
       toast.error("Please type DELETE to confirm.");
       return;
     }
-    toast.success("Account deletion request submitted!", {
-      description: "Your account will be permanently deactivated in 24 hours.",
-    });
-    setDeleteAccountOpen(false);
-    setDeleteConfirmText("");
+    try {
+      setIsDeletingAccount(true);
+      await api("/me", { method: "DELETE", body: JSON.stringify({ confirm: confirmation }) });
+      clearAccessToken();
+      toast.success("Account deletion request submitted!", {
+        description: "Your account has been disabled and you have been logged out.",
+      });
+      setDeleteAccountOpen(false);
+      setDeleteConfirmText("");
+      router.push("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete account");
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   // PASSWORD CHANGE STATE
@@ -1682,7 +1694,7 @@ export default function CustomerAccountDashboardPage() {
                     Delete Customer Account
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                    This action is permanent and cannot be undone. All your order history will be deleted.
+                    This action disables your login immediately and submits your account for deletion.
                   </DialogDescription>
                 </div>
               </div>
@@ -1691,11 +1703,11 @@ export default function CustomerAccountDashboardPage() {
             <form onSubmit={handleDeleteAccount}>
               <div className="p-6 space-y-4">
                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 space-y-2 text-xs">
-                  <p className="font-extrabold text-rose-700 dark:text-rose-400">⚠️ WARNING:</p>
+                  <p className="font-extrabold text-rose-700 dark:text-rose-400">WARNING:</p>
                   <ul className="list-disc pl-4 space-y-1 text-rose-600/90 dark:text-rose-300/90 text-[11px] leading-relaxed">
-                    <li>All your active orders and receipts will be purged.</li>
-                    <li>Saved delivery addresses will be permanently deleted.</li>
-                    <li>Your wishlist products will be removed.</li>
+                    <li>You will be logged out and blocked from signing back in.</li>
+                    <li>Saved delivery addresses will be removed.</li>
+                    <li>Your wishlist and cart items will be cleared.</li>
                   </ul>
                 </div>
 
@@ -1706,7 +1718,7 @@ export default function CustomerAccountDashboardPage() {
                   <Input
                     id="del-confirm"
                     value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
                     className="text-xs font-mono tracking-wider bg-muted/20 uppercase"
                     placeholder="Type DELETE..."
                     required
@@ -1731,10 +1743,10 @@ export default function CustomerAccountDashboardPage() {
                   type="submit"
                   variant="destructive"
                   size="sm"
-                  disabled={deleteConfirmText !== "DELETE"}
+                  disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE" || isDeletingAccount}
                   className="h-9 px-5 text-xs font-bold gap-1.5 shadow-xs disabled:opacity-50"
                 >
-                  <UserX className="h-4 w-4" /> Delete Permanently
+                  <UserX className="h-4 w-4" /> {isDeletingAccount ? "Deleting..." : "Delete Permanently"}
                 </Button>
               </DialogFooter>
             </form>

@@ -33,6 +33,7 @@ router.post("/verify-otp", asyncHandler(async (req, res) => {
     { $setOnInsert: { phone: value, fullName: "Customer" } },
     { upsert: true, new: true }
   );
+  if (user.status !== "active") throw fail(401, "Account is unavailable");
   res.json({ token: tokenFor(user), user: publicUser(user) });
 }));
 router.post("/login", asyncHandler(async (req, res) => { const { email, password } = z.object({ email: z.string().email(), password: z.string().min(8) }).parse(req.body); const user = await User.findOne({ email: email.toLowerCase() }); if (!user?.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw fail(401, "Invalid email or password"); if (user.status !== "active") throw fail(401, "Account is unavailable"); res.json({ token: tokenFor(user), user: publicUser(user) }); }));

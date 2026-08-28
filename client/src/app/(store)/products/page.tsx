@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import {
   Search,
@@ -43,6 +43,81 @@ const availableColors = [
   { name: "Red", hex: "#ef4444" },
   { name: "Green", hex: "#22c55e" },
 ];
+
+type AudienceFilter = "All" | "Men" | "Women" | "Kids" | "Unisex";
+
+const audienceOptions: Array<{ label: string; value: AudienceFilter }> = [
+  { label: "All", value: "All" },
+  { label: "Men", value: "Men" },
+  { label: "Women", value: "Women" },
+  { label: "Kids", value: "Kids" },
+  { label: "Unisex", value: "Unisex" },
+];
+
+const audienceAliases: Record<AudienceFilter, string[]> = {
+  All: ["all", "everyone"],
+  Men: ["men", "mens", "male", "man"],
+  Women: ["women", "womens", "female", "woman", "ladies", "lady"],
+  Kids: ["kids", "kid", "children", "child", "boys", "boy", "girls", "girl"],
+  Unisex: ["unisex", "universal"],
+};
+
+const categoryAliases: Record<string, string[]> = {
+  Bags: ["Bags", "Bags & Luggage"],
+  "Bags & Luggage": ["Bags", "Bags & Luggage"],
+  Home: ["Home", "Home & Lifestyle"],
+  "Home & Lifestyle": ["Home", "Home & Lifestyle"],
+};
+
+function normalizeAudience(value?: string | null): AudienceFilter {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return "All";
+  if (audienceAliases.Men.includes(normalized)) return "Men";
+  if (audienceAliases.Women.includes(normalized)) return "Women";
+  if (audienceAliases.Kids.includes(normalized)) return "Kids";
+  if (audienceAliases.Unisex.includes(normalized)) return "Unisex";
+  return "All";
+}
+
+function productAudience(product: Product): AudienceFilter {
+  return normalizeAudience(product.gender || "Unisex");
+}
+
+function matchesAudience(product: Product, audience: AudienceFilter) {
+  if (audience === "All") return true;
+  const productValue = productAudience(product);
+  return productValue === audience || productValue === "Unisex";
+}
+
+function matchesCategory(product: Product, selectedCategory: string) {
+  if (selectedCategory === "All") return true;
+  const aliases = categoryAliases[selectedCategory] || [selectedCategory];
+  return aliases.some((category) => product.category.toLowerCase() === category.toLowerCase());
+}
+
+function isAudienceSearch(query: string) {
+  const normalized = query.trim().toLowerCase();
+  return normalized.length > 0 && Object.values(audienceAliases).some((aliases) => aliases.includes(normalized));
+}
+
+function searchableProductText(product: Product) {
+  return [
+    product.name,
+    product.sku,
+    getBrandName(product),
+    product.category,
+    product.subCategory,
+    product.description,
+    product.gender,
+    ...audienceAliases[productAudience(product)],
+    ...(product.features || []),
+    ...Object.entries(product.specs || {}).flatMap(([key, value]) => [key, value]),
+    ...(product.tags || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
 
 type SecondaryFilterConfig = {
   key: string;
@@ -97,7 +172,6 @@ const categorySecondaryFilters: Record<string, SecondaryFilterConfig[]> = {
 
 function ProductsContent() {
   const initialProducts = useProducts();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { addItem } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -105,7 +179,7 @@ function ProductsContent() {
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "All");
-  const [selectedGender, setSelectedGender] = useState<string>("All");
+  const [selectedGender, setSelectedGender] = useState<AudienceFilter>(normalizeAudience(searchParams.get("gender") || searchParams.get("audience")));
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSecondaryFilters, setSelectedSecondaryFilters] = useState<Record<string, string[]>>({});
@@ -120,9 +194,11 @@ function ProductsContent() {
   // Sync URL searchParams
   useEffect(() => {
     const cat = searchParams.get("category");
-    if (cat) setSelectedCategory(cat);
+    setSelectedCategory(cat || "All");
     const q = searchParams.get("search");
-    if (q) setSearchQuery(q);
+    setSearchQuery(q || "");
+    const audience = searchParams.get("gender") || searchParams.get("audience");
+    if (audience) setSelectedGender(normalizeAudience(audience));
   }, [searchParams]);
 
   // Dynamic Secondary Filters config based on selectedCategory + custom product specs
@@ -191,23 +267,21 @@ function ProductsContent() {
       // 1. Text Search Filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesName = product.name.toLowerCase().includes(query);
-        const matchesDesc = product.description?.toLowerCase().includes(query) || false;
-        const matchesBrand = getBrandName(product).toLowerCase().includes(query);
-        const matchesCat = product.category.toLowerCase().includes(query);
-        if (!matchesName && !matchesDesc && !matchesBrand && !matchesCat) return false;
+        const audienceQuery = normalizeAudience(searchQuery);
+        const matchesSearch = isAudienceSearch(searchQuery)
+          ? matchesAudience(product, audienceQuery)
+          : searchableProductText(product).includes(query);
+        if (!matchesSearch) return false;
       }
 
       // 2. Category Filter
-      if (selectedCategory !== "All" && product.category !== selectedCategory) {
+      if (!matchesCategory(product, selectedCategory)) {
         return false;
       }
 
       // 3. Gender Filter
-      if (selectedGender !== "All") {
-        if (product.gender && product.gender !== selectedGender && product.gender !== "Unisex") {
-          return false;
-        }
+      if (!matchesAudience(product, selectedGender)) {
+        return false;
       }
 
       // 4. Brand Filter
@@ -472,19 +546,19 @@ function ProductsContent() {
                 Gender / Audience
               </h3>
               <div className="space-y-2 text-xs">
-                {["All", "Men", "Women", "Boys", "Girls", "Unisex"].map((gender) => (
+                {audienceOptions.map((option) => (
                   <label
-                    key={gender}
+                    key={option.label}
                     className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors text-slate-700 dark:text-slate-300 font-medium"
                   >
                     <input
                       type="radio"
                       name="gender"
-                      checked={selectedGender === gender}
-                      onChange={() => setSelectedGender(gender)}
+                      checked={selectedGender === option.value}
+                      onChange={() => setSelectedGender(option.value)}
                       className="accent-amber-500 cursor-pointer h-3.5 w-3.5"
                     />
-                    <span>{gender}</span>
+                    <span>{option.label}</span>
                   </label>
                 ))}
               </div>
@@ -744,7 +818,7 @@ function ProductsContent() {
 
                   {selectedGender !== "All" && (
                     <Badge variant="secondary" className="gap-1 font-bold py-1 px-2.5 bg-background border">
-                      <span>Gender: {selectedGender}</span>
+                      <span>Audience: {selectedGender}</span>
                       <X className="h-3 w-3 cursor-pointer hover:text-rose-500" onClick={() => setSelectedGender("All")} />
                     </Badge>
                   )}
