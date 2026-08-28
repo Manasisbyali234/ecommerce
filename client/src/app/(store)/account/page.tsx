@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useStore, store, type CustomerAddress, type CustomerProfile, type Order } from "@/lib/store";
+import { useStore, store, hydrateCustomerStore, type CustomerAddress, type CustomerProfile, type Order } from "@/lib/store";
 import { useWishlist } from "@/lib/wishlist-context";
 import { useCart } from "@/lib/cart-context";
 import { formatCurrency } from "@/lib/mock-data";
@@ -98,6 +98,13 @@ export default function CustomerAccountDashboardPage() {
   const { addItem, openCart } = useCart();
 
   const [activeTab, setActiveTab] = useState<"profile" | "orders" | "addresses" | "wishlist">("orders");
+
+  // Refresh orders from backend every 30s so status changes by admin are reflected
+  useEffect(() => {
+    hydrateCustomerStore().catch(() => undefined);
+    const interval = setInterval(() => hydrateCustomerStore().catch(() => undefined), 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Order filters
   const [orderSearch, setOrderSearch] = useState("");
@@ -489,19 +496,26 @@ export default function CustomerAccountDashboardPage() {
                 {/* Filters Row */}
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
                   {/* Status Filter */}
-                  <select
-                    value={orderStatusFilter}
-                    onChange={(e) => setOrderStatusFilter(e.target.value)}
-                    className="h-8 rounded-lg border border-muted-foreground/20 bg-muted/20 text-xs px-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="returned">Returned</option>
-                  </select>
+                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                    <SelectTrigger className="h-8 w-36 rounded-lg border border-muted-foreground/20 bg-muted/20 text-xs px-2.5 focus:ring-1 focus:ring-primary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: "all",        label: "All Statuses" },
+                        { value: "pending",    label: "⏳ Pending" },
+                        { value: "processing", label: "⚙️ Processing" },
+                        { value: "shipped",    label: "🚚 Shipped" },
+                        { value: "delivered",  label: "✅ Delivered" },
+                        { value: "cancelled",  label: "❌ Cancelled" },
+                        { value: "returned",   label: "↩️ Returned" },
+                      ].map(({ value, label }) => (
+                        <SelectItem key={value} value={value} className="status-select-item text-xs">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Month Filter */}
                   <select
@@ -1546,7 +1560,7 @@ export default function CustomerAccountDashboardPage() {
                   <span className="flex items-center gap-2 font-bold">
                     <Truck className="h-5 w-5 text-amber-500" /> Live Order Tracking
                   </span>
-                  <Badge className="bg-amber-500 text-slate-950 font-black text-xs uppercase">
+                  <Badge className="bg-amber-500 text-slate-950 font-black text-xs uppercase transition-colors duration-150 hover:bg-slate-100 hover:text-slate-700">
                     {selectedTrackingOrder.status}
                   </Badge>
                 </DialogTitle>
