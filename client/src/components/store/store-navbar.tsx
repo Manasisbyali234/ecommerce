@@ -120,7 +120,7 @@ export function StoreNavbar() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [otpStep, setOtpStep] = useState<"mobile" | "otp">("mobile");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [otpValues, setOtpValues] = useState(["4", "3", "2", "1"]);
+  const [otpValues, setOtpValues] = useState(["", "", "", ""]);
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [loggedInPhone, setLoggedInPhone] = useState("");
 
@@ -179,7 +179,7 @@ export function StoreNavbar() {
 
     try {
       const result = await authApi.requestOtp(cleanMobile);
-      toast.success(`OTP Sent to +91 ${cleanMobile}`, { description: result.debugOtp ? `Development OTP: ${result.debugOtp}` : "Check your SMS for the verification code." });
+      toast.success(`OTP Sent to +91 ${cleanMobile}`, { description: result.debugOtp ? `Demo OTP: ${result.debugOtp}` : "Check your SMS for the verification code." });
       setOtpStep("otp");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to send OTP"); }
   };

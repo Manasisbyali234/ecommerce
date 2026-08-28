@@ -397,7 +397,7 @@ export default function CustomersPage() {
             <Card
               key={c.email}
               onClick={() => setSelected(c)}
-              className="group border shadow-xs hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer p-4 space-y-3"
+              className="group border shadow-xs hover:border-amber-500/50 hover:shadow-md hover:bg-[rgba(249,115,22,0.08)] transition-all duration-200 ease-in-out cursor-pointer p-4 space-y-3"
             >
               {/* Header Avatar & Tier */}
               <div className="flex items-center justify-between">
@@ -450,7 +450,7 @@ export default function CustomersPage() {
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-slate-400" /> {c.location}
                 </div>
-                <Button variant="ghost" size="sm" className="h-7 text-xs font-semibold hover:text-amber-500">
+                <Button variant="ghost" size="sm" className="h-7 text-xs font-semibold text-muted-foreground group-hover:bg-amber-500 group-hover:text-white transition-all duration-200 ease-in-out">
                   View Profile →
                 </Button>
               </div>

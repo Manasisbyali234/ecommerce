@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { CheckCircle2, ArrowRight, LayoutDashboard, ShoppingBag } from "lucide-react";
+import { CheckCircle2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -51,11 +51,6 @@ function OrderSuccessContent() {
       </Card>
 
       <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-        <Button asChild size="lg" className="h-11 px-6 text-sm font-semibold shadow-md">
-          <Link href={`/admin/orders?q=${encodeURIComponent(orderId)}`}>
-            <LayoutDashboard className="mr-2 h-4 w-4" /> View Order in Admin Dashboard
-          </Link>
-        </Button>
         <Button asChild variant="outline" size="lg" className="h-11 px-6 text-sm font-semibold">
           <Link href="/">
             <ShoppingBag className="mr-2 h-4 w-4" /> Continue Shopping
