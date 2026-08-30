@@ -260,19 +260,19 @@ export function StoreNavbar() {
         </div>
       )}
 
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
+      <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:flex-nowrap sm:px-6 sm:py-0 lg:px-8 lg:gap-4">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+        <Link href="/" className="group flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:shrink-0">
           {headerConfig.logo?.imageUrl ? (
             <img
               src={headerConfig.logo.imageUrl}
               alt={headerConfig.logo.text || "Store Logo"}
               style={{ height: `${headerConfig.logo.heightPx || 36}px` }}
-              className="max-w-[200px] object-contain"
+              className="max-h-9 max-w-[150px] object-contain sm:max-h-none sm:max-w-[200px]"
             />
           ) : (
             <>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md transition-transform group-hover:scale-105">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md transition-transform group-hover:scale-105 sm:h-9 sm:w-9">
                 <Store className="h-5 w-5" />
               </div>
               <div className="flex flex-col hidden sm:flex">
@@ -291,14 +291,14 @@ export function StoreNavbar() {
         {headerConfig.actions?.showSearch !== false && (
           <form
             onSubmit={handleSearchSubmit}
-            className="flex-1 max-w-2xl mx-2 sm:mx-4 flex items-center h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm focus-within:ring-2 focus-within:ring-amber-500 overflow-hidden"
+            className="order-3 flex h-10 w-full flex-[1_0_100%] items-center overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm focus-within:ring-2 focus-within:ring-amber-500 dark:border-slate-700 dark:bg-slate-900 sm:order-none sm:mx-4 sm:max-w-2xl sm:flex-1"
           >
             {/* Category Dropdown (Left) */}
             <div className="relative shrink-0">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="h-10 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold pl-2.5 pr-5 border-r border-slate-300 dark:border-slate-700 cursor-pointer focus:outline-none appearance-none max-w-[68px] sm:max-w-[80px] truncate"
+                className="h-10 max-w-[60px] cursor-pointer appearance-none truncate border-r border-slate-300 bg-slate-100 pl-2 pr-5 text-xs font-semibold text-slate-800 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 min-[375px]:max-w-[68px] sm:max-w-[80px] sm:pl-2.5"
               >
                 <option value="All">All</option>
                 <option value="Audio">Audio</option>
@@ -317,13 +317,13 @@ export function StoreNavbar() {
               placeholder="Search Products, Brands and More ..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 h-10 px-3 text-xs sm:text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none min-w-0"
+              className="h-10 min-w-0 flex-1 bg-transparent px-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 sm:px-3 sm:text-sm"
             />
 
             {/* Orange Search Icon Button (Right) */}
             <button
               type="submit"
-              className="h-10 w-10 sm:w-11 flex items-center justify-center bg-[#febd69] hover:bg-[#f3a847] text-slate-950 transition-colors shrink-0 font-bold"
+              className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#febd69] font-bold text-slate-950 transition-colors hover:bg-[#f3a847] sm:w-11"
               title="Search"
             >
               <Search className="h-4 w-4 stroke-[2.5]" />
@@ -332,14 +332,14 @@ export function StoreNavbar() {
         )}
 
         {/* Right Action Items */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
           {/* Wishlist Button */}
           {headerConfig.actions?.showWishlist !== false && (
             <Button
               variant="outline"
               size="sm"
               asChild
-              className="relative flex items-center justify-center h-9 w-9 p-0 border-muted-foreground/20 hover:border-rose-500 hover:text-rose-500 transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center border-muted-foreground/20 p-0 transition-colors hover:border-rose-500 hover:text-rose-500 sm:h-9 sm:w-9"
               title="My Saved Wishlist"
             >
               <Link href="/wishlist">
@@ -359,7 +359,7 @@ export function StoreNavbar() {
               variant="outline"
               size="sm"
               onClick={() => setIsOpen(true)}
-              className="relative flex items-center justify-center h-9 px-3 border-muted-foreground/20 hover:border-primary"
+              className="relative flex h-8 items-center justify-center border-muted-foreground/20 px-2 hover:border-primary sm:h-9 sm:px-3"
             >
               <div className="relative flex items-center">
                 <ShoppingBag className="h-4 w-4 text-foreground" />
@@ -418,7 +418,7 @@ export function StoreNavbar() {
                       setOtpStep("mobile");
                       setLoginModalOpen(true);
                     }}
-                    className="h-9 px-3 sm:px-4 gap-1.5 shadow-sm font-semibold text-xs"
+                    className="h-8 gap-1.5 px-2 text-xs font-semibold shadow-sm sm:h-9 sm:px-4"
                   >
                     <User className="h-4 w-4 sm:hidden" />
                     <span>Login</span>
@@ -432,7 +432,7 @@ export function StoreNavbar() {
 
       {/* SUB-HEADER CATEGORY BAR (Amazon-Style Dark Navy Navigation) */}
       <div className="bg-[#232f3e] text-slate-100 text-xs font-medium border-t border-slate-700/60 shadow-inner">
-        <div className="mx-auto flex h-10 max-w-7xl items-center px-4 sm:px-6 lg:px-8 gap-1 sm:gap-3 overflow-x-auto no-scrollbar">
+        <div className="mobile-scrollbar-none mx-auto flex h-10 max-w-7xl items-center gap-1 overflow-x-auto px-3 sm:gap-3 sm:px-6 lg:px-8">
           {/* ALL CATEGORIES HAMBURGER BUTTON */}
           <button
             onClick={() => setAllCategoriesDrawerOpen(true)}
@@ -466,22 +466,22 @@ export function StoreNavbar() {
 
       {/* ALL CATEGORIES & SUBCATEGORIES HAMBURGER SIDE DRAWER */}
       <Sheet open={allCategoriesDrawerOpen} onOpenChange={setAllCategoriesDrawerOpen}>
-        <SheetContent side="left" className="w-80 sm:w-96 p-0 overflow-y-auto bg-background [&>button]:top-3 [&>button]:right-3 [&>button]:z-10 [&>button]:rounded-md [&>button]:bg-white/15 [&>button]:p-1 [&>button]:opacity-100 [&>button]:text-white [&>button:hover]:bg-white/25">
+        <SheetContent side="left" className="w-[min(90vw,22rem)] p-0 overflow-y-auto bg-background sm:w-96 [&>button]:top-3 [&>button]:right-3 [&>button]:z-10 [&>button]:rounded-md [&>button]:bg-white/15 [&>button]:p-1 [&>button]:opacity-100 [&>button]:text-white [&>button:hover]:bg-white/25">
           {/* Drawer Top Header Banner */}
           <div className="bg-[#232f3e] text-white pt-10 pb-4 px-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-slate-700/80 flex items-center justify-center text-white font-bold">
                 <User className="h-5 w-5" />
               </div>
-              <div>
-                <h3 className="font-bold text-sm">Hello, {userLoggedIn ? loggedInPhone : "Customer"}</h3>
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-bold">Hello, {userLoggedIn ? loggedInPhone : "Customer"}</h3>
                 <p className="text-[11px] text-slate-300">Welcome to Metromindz Store</p>
               </div>
             </div>
             <Link
               href="/account"
               onClick={() => setAllCategoriesDrawerOpen(false)}
-              className="text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold transition-colors"
+              className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1.5 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-400"
             >
               My Account
             </Link>
@@ -506,10 +506,10 @@ export function StoreNavbar() {
                       }}
                       className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-xs font-medium text-foreground transition-colors"
                     >
-                      <span className="flex items-center gap-2.5">
-                        {renderIcon(opt.icon, "h-4 w-4 text-amber-500")}
-                        {opt.label}
-                      </span>
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          {renderIcon(opt.icon, "h-4 w-4 text-amber-500")}
+                          <span className="truncate">{opt.label}</span>
+                        </span>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   ))
@@ -534,11 +534,11 @@ export function StoreNavbar() {
                         }}
                         className="w-full flex items-center justify-between p-3 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors"
                       >
-                        <span className="flex items-center gap-2.5">
+                        <span className="flex min-w-0 items-center gap-2.5">
                           <div className="p-1.5 rounded-md bg-primary/10 text-primary">
                             <Sparkles className="h-4 w-4" />
                           </div>
-                          <span>{group.name}</span>
+                          <span className="truncate">{group.name}</span>
                         </span>
                         <ChevronDown
                           className={`h-4 w-4 text-muted-foreground transition-transform ${
@@ -622,16 +622,16 @@ export function StoreNavbar() {
 
       {/* OTP Mobile Authentication Dialog Popup */}
       <Dialog open={loginModalOpen} onOpenChange={setLoginModalOpen}>
-        <DialogContent className="sm:max-w-md p-6">
+        <DialogContent className="p-4 sm:max-w-md sm:p-6">
           {otpStep === "mobile" ? (
             /* STEP 1: Enter Mobile Number */
             <div className="space-y-5">
               <DialogHeader className="space-y-2 text-left">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Phone className="h-5 w-5" />
                   </div>
-                  <DialogTitle className="text-xl font-bold tracking-tight">
+                  <DialogTitle className="text-lg font-bold tracking-tight sm:text-xl">
                     Login / Sign Up
                   </DialogTitle>
                 </div>
@@ -698,7 +698,7 @@ export function StoreNavbar() {
 
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 {/* 4 Single-Digit OTP Inputs */}
-                <div className="flex justify-center gap-3 py-2">
+                <div className="grid grid-cols-4 gap-2 py-2 min-[375px]:gap-3">
                   {otpValues.map((val, idx) => (
                     <input
                       key={idx}
@@ -707,7 +707,7 @@ export function StoreNavbar() {
                       maxLength={1}
                       value={val}
                       onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      className="h-12 w-12 text-center text-xl font-mono font-bold rounded-xl border border-input bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                      className="h-11 w-full text-center font-mono text-lg font-bold rounded-xl border border-input bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none min-[375px]:h-12 min-[375px]:text-xl"
                     />
                   ))}
                 </div>

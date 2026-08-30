@@ -158,18 +158,18 @@ function StoreHomeContent() {
   };
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-8 pb-12 sm:space-y-12 sm:pb-16">
       {/* Full-Width Edge-to-Edge Hero Slider Carousel */}
       <HeroCarousel />
 
       {/* Triple Product / Sale Advertisement Banners Row (Right After Hero Section) */}
       {afterHeroBanners.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+        <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-3">
             {afterHeroBanners.map((banner) => (
               <div
                 key={banner.id}
-                className="group relative overflow-hidden rounded-2xl border text-white p-5 shadow-lg flex flex-col justify-between h-48 sm:h-52 hover:shadow-2xl transition-all duration-300"
+                className="group relative flex h-40 flex-col justify-between overflow-hidden rounded-xl border p-4 text-white shadow-lg transition-all duration-300 hover:shadow-2xl sm:h-52 sm:rounded-2xl sm:p-5"
                 style={{ backgroundColor: banner.bgColor || "#090d16" }}
               >
                 {/* Image & Smooth Gradient Mask to prevent text overlap */}
@@ -192,7 +192,7 @@ function StoreHomeContent() {
                   </>
                 )}
 
-                <div className="relative z-10 space-y-1.5 max-w-[62%]">
+                <div className="relative z-10 max-w-[68%] space-y-1.5 sm:max-w-[62%]">
                   {banner.subtitle && (
                     <Badge className="bg-primary/90 text-primary-foreground font-bold text-[10px] px-2 py-0.5 uppercase tracking-wider shadow-xs max-w-fit">
                       {banner.subtitle}
@@ -227,20 +227,20 @@ function StoreHomeContent() {
       )}
 
       {/* SHOP BY CATEGORY Grid Section (Matching Reference Design) */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+      <section className="mx-auto max-w-7xl space-y-4 px-3 sm:space-y-6 sm:px-6 lg:px-8">
         <div className="text-center space-y-1.5">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-wider text-foreground">
+          <h2 className="text-xl font-bold tracking-wider text-foreground sm:text-3xl">
             Shop by sub category
           </h2>
           <div className="h-1 w-16 bg-amber-500 rounded-full mx-auto" />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 pt-2 pb-1">
+        <div className="grid grid-cols-2 gap-2.5 pb-1 pt-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
           {subCategories.map((item) => (
             <Link
               key={item.id}
               href={`/products?category=${encodeURIComponent(item.category)}`}
-              className="group flex flex-col justify-between bg-[#9ecb92] dark:bg-emerald-950/80 border border-[#85b978] dark:border-emerald-800 rounded-xl p-2.5 text-center shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="group flex min-w-0 flex-col justify-between rounded-lg border border-[#85b978] bg-[#9ecb92] p-2 text-center shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-emerald-800 dark:bg-emerald-950/80 sm:rounded-xl sm:p-2.5"
             >
               {/* Aspect 4:5 Inner White Container Image */}
               <div className="relative aspect-[4/5] w-full rounded-lg overflow-hidden bg-white shadow-inner">
@@ -253,7 +253,7 @@ function StoreHomeContent() {
 
               {/* Card Text Content */}
               <div className="pt-2.5 pb-1 flex flex-col items-center justify-center">
-                <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 line-clamp-1 leading-snug">
+                <h3 className="line-clamp-2 text-xs font-bold leading-snug text-slate-900 dark:text-slate-100 sm:text-sm">
                   {item.title}
                 </h3>
                 <span className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-emerald-300 tracking-tight my-0.5">
@@ -270,7 +270,7 @@ function StoreHomeContent() {
 
       {/* ADMIN-MANAGED CATEGORY IMAGE GRID */}
       {categoriesList.some((category) => category.image) && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        <section className="mx-auto max-w-7xl space-y-4 px-3 sm:space-y-6 sm:px-6 lg:px-8">
           <div className="text-center space-y-1.5">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-wider text-foreground">Shop by category</h2>
             <div className="h-1 w-16 bg-primary rounded-full mx-auto" />
@@ -293,7 +293,7 @@ function StoreHomeContent() {
       {contentLoadError && <p className="mx-auto max-w-7xl px-4 text-center text-sm text-destructive">Store categories could not be loaded. Please verify the backend API is running and reachable.</p>}
 
       {/* Main Store Catalog Section */}
-      <section id="products" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+      <section id="products" className="mx-auto max-w-7xl space-y-5 px-3 sm:space-y-8 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-6">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
@@ -345,7 +345,7 @@ function StoreHomeContent() {
 
         {/* Product Grid */}
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-16 space-y-3 rounded-2xl border border-dashed p-8">
+          <div className="space-y-3 rounded-xl border border-dashed p-6 py-12 text-center sm:rounded-2xl sm:p-8 sm:py-16">
             <Filter className="h-10 w-10 text-muted-foreground mx-auto" />
             <h3 className="text-lg font-semibold">No products found</h3>
             <p className="text-sm text-muted-foreground">
@@ -363,7 +363,7 @@ function StoreHomeContent() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {filteredProducts.map((product) => {
               const mrp = product.originalPrice || Math.round(product.price * 1.28);
               const discountPercent = Math.round(((mrp - product.price) / mrp) * 100);
@@ -477,16 +477,16 @@ function StoreHomeContent() {
 
       {/* Product Advertisement Rectangular Banner (Right After Shop by Categories) */}
       {afterCategoryBanner && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2">
+        <section className="mx-auto max-w-7xl px-3 py-2 sm:px-6 lg:px-8">
           <div
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 border border-slate-800 text-white p-4 sm:p-6 shadow-xl group"
+            className="group relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-4 text-white shadow-xl sm:rounded-2xl sm:p-6"
             style={{ backgroundColor: afterCategoryBanner.bgColor || undefined }}
           >
             {/* Ambient Glow Effects */}
             <div className="absolute -top-24 -right-24 h-60 w-60 rounded-full bg-amber-500/20 blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -left-24 h-60 w-60 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div className="relative z-10 grid grid-cols-1 items-center gap-4 sm:gap-6 md:grid-cols-12">
               {/* Left Column: Offer Details & CTA (8 Cols) */}
               <div className="md:col-span-8 space-y-2.5">
                 {afterCategoryBanner.subtitle && (
@@ -550,7 +550,7 @@ function StoreHomeContent() {
       )}
 
       {/* Bestseller Products Section */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8 pt-4">
+      <section className="mx-auto max-w-7xl space-y-5 px-3 pt-4 sm:space-y-8 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -573,7 +573,7 @@ function StoreHomeContent() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {bestsellerProducts.map((product) => {
             const mrp = product.originalPrice || Math.round(product.price * 1.28);
             const discountPercent = Math.round(((mrp - product.price) / mrp) * 100);
@@ -582,7 +582,7 @@ function StoreHomeContent() {
             return (
               <Card
                 key={`bestseller-${product.id}`}
-                className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:shadow-xl sm:rounded-2xl"
               >
                 {/* Card Media Header */}
                 <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -678,7 +678,7 @@ function StoreHomeContent() {
       </section>
 
       {/* Shop by Brands Section (2 Product Card Rows - 10 Products Total) */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8 pt-6">
+      <section className="mx-auto max-w-7xl space-y-5 px-3 pt-5 sm:space-y-8 sm:px-6 sm:pt-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -702,7 +702,7 @@ function StoreHomeContent() {
         </div>
 
         {/* 2 Product Card Rows (5 per row = 10 products total) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {initialProducts
             .filter((p) => p.status === "active")
             .slice(0, 10)
@@ -716,7 +716,7 @@ function StoreHomeContent() {
               return (
                 <Card
                   key={`brand-card-${product.id}-${idx}`}
-                  className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                  className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:shadow-xl sm:rounded-2xl"
                 >
                   {/* Card Media Header */}
                   <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -811,7 +811,7 @@ function StoreHomeContent() {
       </section>
 
       {/* Mixed Content Deals Slider Carousel Section (Matching Reference Image Design) */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pt-6">
+      <section className="mx-auto max-w-7xl space-y-4 px-3 pt-5 sm:space-y-6 sm:px-6 sm:pt-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -912,7 +912,7 @@ function StoreHomeContent() {
             <Link
               key={`deal-card-${idx}`}
               href={renderedDeal.link}
-              className="snap-start shrink-0 w-60 sm:w-64 rounded-2xl border border-muted-foreground/20 bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all duration-300 group flex flex-col justify-between"
+              className="group flex w-40 shrink-0 snap-start flex-col justify-between overflow-hidden rounded-xl border border-muted-foreground/20 bg-card shadow-sm transition-all duration-300 hover:border-amber-500/50 hover:shadow-md min-[380px]:w-44 sm:w-64 sm:rounded-2xl"
             >
               {/* Portrait 3:4 Image Container */}
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -950,16 +950,16 @@ function StoreHomeContent() {
 
       {/* Rectangular Product Advertisement Banner (Right After Crazy Mega Deals & Offers) */}
       {afterMegaDealsBanner && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2">
+        <section className="mx-auto max-w-7xl px-3 py-2 sm:px-6 lg:px-8">
           <div
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-800/60 text-white p-4 sm:p-6 shadow-xl group"
+            className="group relative overflow-hidden rounded-xl border border-emerald-800/60 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 p-4 text-white shadow-xl sm:rounded-2xl sm:p-6"
             style={{ backgroundColor: afterMegaDealsBanner.bgColor || undefined }}
           >
             {/* Ambient Glow Effects */}
             <div className="absolute -top-24 -right-24 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -left-24 h-60 w-60 rounded-full bg-teal-500/20 blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div className="relative z-10 grid grid-cols-1 items-center gap-4 sm:gap-6 md:grid-cols-12">
               {/* Left Column: Offer Details & CTA (8 Cols) */}
               <div className="md:col-span-8 space-y-2.5">
                 {afterMegaDealsBanner.subtitle && (
@@ -1026,7 +1026,7 @@ function StoreHomeContent() {
       <Dialog open={!!quickViewProduct} onOpenChange={(o) => !o && setQuickViewProduct(null)}>
         <DialogContent className="sm:max-w-2xl">
           {quickViewProduct && (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
                 <img
                   src={quickViewProduct.image}

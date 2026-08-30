@@ -58,40 +58,40 @@ export function StoreFooter() {
   return (
     <footer className="border-t bg-muted/30">
       {/* Value Proposition Bar */}
-      <div className="border-b bg-background/50 py-6">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
-          <div className="flex items-center gap-3">
+      <div className="border-b bg-background/50 py-4 sm:py-6">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-3 sm:gap-4 sm:px-6 lg:grid-cols-4 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Truck className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-xs font-semibold text-foreground">Free Shipping</h4>
               <p className="text-[11px] text-muted-foreground">On orders over ₹499</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-xs font-semibold text-foreground">Secure Payment</h4>
               <p className="text-[11px] text-muted-foreground">100% encrypted checkout</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <RefreshCw className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-xs font-semibold text-foreground">30-Day Returns</h4>
               <p className="text-[11px] text-muted-foreground">Hassle-free guarantee</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <CreditCard className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-xs font-semibold text-foreground">Instant Invoices</h4>
               <p className="text-[11px] text-muted-foreground">PDF download & email</p>
             </div>
@@ -100,16 +100,16 @@ export function StoreFooter() {
       </div>
 
       {/* Main Footer Links */}
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className={`grid grid-cols-1 gap-8 sm:grid-cols-2 ${gridColClass}`}>
+      <div className="mx-auto max-w-7xl px-3 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 ${gridColClass}`}>
           {/* Brand & Social Media Column */}
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <Link href="/" className="inline-block">
               {footerConfig.logoUrl ? (
                 <img
                   src={footerConfig.logoUrl}
                   alt={footerConfig.brandName || "Store Logo"}
-                  className="h-9 max-w-[200px] object-contain"
+                  className="h-9 max-w-full object-contain sm:max-w-[200px]"
                 />
               ) : (
                 <div className="flex items-center gap-2">

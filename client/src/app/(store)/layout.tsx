@@ -19,11 +19,11 @@ export default function StoreLayout({
         <StorefrontDataHydrator />
         <CustomerDataHydrator />
         <div
-          className="flex min-h-screen flex-col bg-background text-foreground"
+          className="mobile-safe-x flex min-h-screen flex-col bg-background text-foreground"
           suppressHydrationWarning
         >
           <StoreNavbar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 min-w-0">{children}</main>
           <CartDrawer />
           <StoreFooter />
         </div>

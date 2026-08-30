@@ -16,7 +16,7 @@ export default function WishlistPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      <div className="mx-auto max-w-7xl space-y-5 px-3 pt-4 sm:space-y-6 sm:px-6 sm:pt-6 lg:px-8">
         {/* Breadcrumb Navigation */}
         <nav className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
           <Link href="/" className="hover:text-primary transition-colors">
@@ -27,10 +27,10 @@ export default function WishlistPage() {
         </nav>
 
         {/* Page Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-              <Heart className="h-7 w-7 text-rose-500 fill-rose-500" />
+        <div className="flex flex-col justify-between gap-3 border-b pb-4 sm:flex-row sm:items-center sm:gap-4 sm:pb-5">
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              <Heart className="h-6 w-6 shrink-0 fill-rose-500 text-rose-500 sm:h-7 sm:w-7" />
               <span>My Saved Wishlist</span>
               <span className="text-sm font-normal text-muted-foreground">
                 ({wishlistCount} {wishlistCount === 1 ? "item" : "items"})
@@ -55,7 +55,7 @@ export default function WishlistPage() {
 
         {/* Wishlist Items Grid / Empty State */}
         {wishlistCount === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-background border rounded-2xl p-8 text-center shadow-xs space-y-4">
+          <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border bg-background p-6 py-14 text-center shadow-xs sm:rounded-2xl sm:p-8 sm:py-20">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-rose-500/10 text-rose-500">
               <Heart className="h-10 w-10" />
             </div>
@@ -72,7 +72,7 @@ export default function WishlistPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {wishlistProducts.map((product) => {
               const mrp = product.originalPrice || Math.round(product.price * 1.28);
               const discountPercent = Math.round(((mrp - product.price) / mrp) * 100);
@@ -80,7 +80,7 @@ export default function WishlistPage() {
               return (
                 <Card
                   key={product.id}
-                  className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                  className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:shadow-xl sm:rounded-2xl"
                 >
                   {/* Card Media Header */}
                   <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -95,7 +95,7 @@ export default function WishlistPage() {
                     {/* Category Tag */}
                     <Badge
                       variant="secondary"
-                      className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider backdrop-blur-md bg-white/80 dark:bg-slate-900/80"
+                      className="absolute left-2 top-2 max-w-[70%] truncate bg-white/80 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md dark:bg-slate-900/80 sm:left-3 sm:top-3 sm:text-[10px]"
                     >
                       {product.category}
                     </Badge>
@@ -103,7 +103,7 @@ export default function WishlistPage() {
                     {/* Remove Trash Button */}
                     <button
                       onClick={() => toggleWishlist(product.id, product.name)}
-                      className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-center text-slate-500 hover:text-rose-500 transition-colors shadow-xs"
+                      className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-slate-500 shadow-xs backdrop-blur-md transition-colors hover:text-rose-500 dark:bg-slate-900/80 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
                       title="Remove from Wishlist"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -111,10 +111,10 @@ export default function WishlistPage() {
                   </div>
 
                   {/* Card Body */}
-                  <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <div className="flex flex-1 flex-col justify-between space-y-2 p-2.5 sm:space-y-3 sm:p-4">
                     <div className="space-y-1">
                       <Link href={`/products/${product.id}`}>
-                        <h3 className="font-bold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                        <h3 className="line-clamp-2 text-xs font-bold text-foreground transition-colors group-hover:text-primary sm:line-clamp-1 sm:text-sm">
                           {product.name}
                         </h3>
                       </Link>
@@ -124,14 +124,14 @@ export default function WishlistPage() {
                       </p>
 
                       {/* Rating Row */}
-                      <div className="flex items-center gap-1.5 pt-1">
+                      <div className="flex flex-wrap items-center gap-1 pt-1 sm:gap-1.5">
                         <div className="flex items-center text-amber-400">
                           <Star className="h-3.5 w-3.5 fill-amber-400" />
-                          <span className="text-xs font-bold text-foreground ml-1">
+                          <span className="ml-1 text-xs font-bold text-foreground">
                             {product.rating || 4.8}
                           </span>
                         </div>
-                        <span className="text-xs text-muted-foreground font-medium">
+                        <span className="text-[11px] font-medium text-muted-foreground sm:text-xs">
                           ({product.reviewCount || 48} reviews)
                         </span>
                       </div>
@@ -139,12 +139,12 @@ export default function WishlistPage() {
 
                     {/* Price & Move to Cart Button */}
                     <div className="space-y-3 pt-2 border-t mt-2">
-                      <div className="flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-extrabold text-lg text-foreground">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                        <div className="flex flex-wrap items-baseline gap-1.5">
+                          <span className="text-base font-extrabold text-foreground sm:text-lg">
                             {formatCurrency(product.price)}
                           </span>
-                          <span className="line-through text-xs text-muted-foreground font-medium">
+                          <span className="text-[11px] font-medium text-muted-foreground line-through sm:text-xs">
                             {formatCurrency(mrp)}
                           </span>
                         </div>

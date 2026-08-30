@@ -199,11 +199,11 @@ export default function StorefrontCheckoutPage() {
   const availableCoupons = coupons.filter((c) => c.active);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="mx-auto max-w-7xl space-y-5 px-3 py-5 sm:space-y-8 sm:px-6 sm:py-10 lg:px-8">
       {/* Header Title & Wizard Step Progress Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+      <div className="flex flex-col justify-between gap-4 border-b pb-5 md:flex-row md:items-center md:pb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             Customer Checkout
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -212,10 +212,10 @@ export default function StorefrontCheckoutPage() {
         </div>
 
         {/* 2-Step Sequential Wizard Progress */}
-        <div className="flex items-center gap-3 bg-muted/30 p-2 rounded-xl border">
+        <div className="mobile-scrollbar-none flex w-full items-center gap-2 overflow-x-auto rounded-xl border bg-muted/30 p-2 md:w-auto md:gap-3">
           <button
             onClick={() => setStep(1)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 ${
               step === 1
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -237,7 +237,7 @@ export default function StorefrontCheckoutPage() {
               }
               setStep(2);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 ${
               step === 2
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -251,14 +251,14 @@ export default function StorefrontCheckoutPage() {
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3 lg:gap-8">
         {/* Main Step Content Column */}
         <div className="space-y-6 lg:col-span-2">
           {step === 1 ? (
             /* STEP 1: Shopping Cart & Order Items List */
             <Card className="border shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <CardHeader className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
                   <ShoppingCart className="h-5 w-5 text-primary" /> Step 1: Shopping Cart Items ({items.length})
                 </CardTitle>
                 <Link href="/#products" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
@@ -288,15 +288,15 @@ export default function StorefrontCheckoutPage() {
                         return (
                           <div
                             key={item.product.id ?? index}
-                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 hover:bg-muted/10 transition-colors"
+                            className="flex flex-col items-start justify-between gap-3 p-3 transition-colors hover:bg-muted/10 sm:flex-row sm:items-center sm:gap-4 sm:p-4"
                           >
-                            <div className="flex items-center gap-4">
+                            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                               <img
                                 src={item.product.image}
                                 alt={item.product.name}
-                                className="h-20 w-20 rounded-xl object-cover border shrink-0 shadow-sm"
+                                className="h-16 w-16 shrink-0 rounded-lg border object-cover shadow-sm sm:h-20 sm:w-20 sm:rounded-xl"
                               />
-                              <div className="space-y-1">
+                              <div className="min-w-0 space-y-1">
                                 {/* Category & In Stock Tags (ABOVE Product Name) */}
                                 <div className="flex flex-wrap items-center gap-2 pb-0.5">
                                   <Badge variant="secondary" className="text-[10px] font-semibold">
@@ -309,7 +309,7 @@ export default function StorefrontCheckoutPage() {
 
                                 {/* Product Name */}
                                 <Link href={`/products/${item.product.id}`}>
-                                  <h4 className="font-bold text-sm text-foreground hover:text-primary transition-colors line-clamp-1">
+                                  <h4 className="line-clamp-2 text-sm font-bold text-foreground transition-colors hover:text-primary sm:line-clamp-1">
                                     {item.product.name}
                                   </h4>
                                 </Link>
@@ -351,7 +351,7 @@ export default function StorefrontCheckoutPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between w-full sm:w-auto gap-6 pt-2 sm:pt-0 border-t sm:border-0">
+                            <div className="flex w-full flex-wrap items-center justify-between gap-3 border-t pt-2 sm:w-auto sm:flex-nowrap sm:gap-6 sm:border-0 sm:pt-0">
                               {/* Quantity Controls */}
                               <div className="flex items-center gap-1.5 border rounded-lg p-1 bg-background">
                                 <button
@@ -374,7 +374,7 @@ export default function StorefrontCheckoutPage() {
                               </div>
 
                               {/* Item Subtotal, Unit Discount Price, MRP & Discount % */}
-                              <div className="text-right min-w-[110px] space-y-0.5">
+                              <div className="min-w-[94px] space-y-0.5 text-right sm:min-w-[110px]">
                                 <div className="text-base font-extrabold text-foreground">
                                   {formatCurrency(item.product.price * item.quantity)}
                                 </div>
@@ -405,7 +405,7 @@ export default function StorefrontCheckoutPage() {
                     <div className="flex items-center justify-end pt-4">
                       <Button
                         size="lg"
-                        className="h-12 px-8 font-semibold shadow-md"
+                        className="h-11 w-full px-4 font-semibold shadow-md sm:h-12 sm:w-auto sm:px-8"
                         onClick={() => setStep(2)}
                       >
                         Continue to Shipping Address <ArrowRight className="ml-2 h-4 w-4" />
@@ -418,8 +418,8 @@ export default function StorefrontCheckoutPage() {
           ) : (
             /* STEP 2: Shipping Address Selection Options */
             <Card className="border shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <CardHeader className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
                   <MapPin className="h-5 w-5 text-primary" /> Step 2: Select Shipping Address
                 </CardTitle>
                 <Badge variant="outline" className="text-xs">
@@ -577,17 +577,18 @@ export default function StorefrontCheckoutPage() {
                 )}
 
                 {/* Step 2 Action Buttons */}
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <Button
                     variant="outline"
                     onClick={() => setStep(1)}
+                    className="w-full sm:w-auto"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Cart
                   </Button>
 
                   <Button
                     size="lg"
-                    className="h-12 px-8 font-semibold shadow-md"
+                    className="h-11 w-full px-4 font-semibold shadow-md sm:h-12 sm:w-auto sm:px-8"
                     onClick={handlePlaceOrder}
                   >
                     Complete Order ({formatCurrency(total)}) <CheckCircle2 className="ml-2 h-4 w-4" />

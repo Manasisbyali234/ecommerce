@@ -338,9 +338,9 @@ export default function CustomerAccountDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
       {/* Main Dashboard Workspace */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+      <div className="mx-auto max-w-7xl px-3 pb-12 pt-4 sm:px-6 sm:pb-16 sm:pt-8 lg:px-8">
         {/* Dashboard Layout: Sidebar + Main Content */}
-        <div className="flex gap-6 items-start">
+        <div className="flex items-start gap-4 lg:gap-6">
 
           {/* ── LEFT SIDEBAR ── */}
           <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-6 gap-3">
@@ -438,7 +438,7 @@ export default function CustomerAccountDashboardPage() {
           {/* ── MAIN CONTENT ── */}
           <div className="flex-1 min-w-0">
             {/* Mobile Tab Bar */}
-            <div className="flex lg:hidden overflow-x-auto gap-2 pb-2 mb-4">
+            <div className="mobile-scrollbar-none mb-4 flex gap-2 overflow-x-auto pb-2 lg:hidden">
               {sidebarNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -480,7 +480,7 @@ export default function CustomerAccountDashboardPage() {
               </div>
 
               {/* Filter Toolbar */}
-              <div className="bg-white dark:bg-slate-900 border border-muted/60 rounded-2xl p-3 shadow-xs flex flex-col md:flex-row items-center gap-3">
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-muted/60 bg-white p-3 shadow-xs dark:bg-slate-900 sm:rounded-2xl md:flex-row">
                 {/* Search */}
                 <div className="relative flex-1 min-w-0 w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -707,7 +707,7 @@ export default function CustomerAccountDashboardPage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
               {addresses.map((addr) => (
                 <Card
                   key={addr.id}
@@ -1096,7 +1096,7 @@ export default function CustomerAccountDashboardPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {wishlistProducts.map((p) => (
                   <Card key={p.id} className="overflow-hidden border shadow-xs flex flex-col justify-between group">
                     <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -1143,11 +1143,11 @@ export default function CustomerAccountDashboardPage() {
 
       {/* ADD / EDIT ADDRESS DIALOG — Enhanced UI */}
       <Dialog open={addressModalOpen} onOpenChange={setAddressModalOpen}>
-          <DialogContent className="max-w-xl p-0 overflow-hidden gap-0 rounded-2xl shadow-2xl">
+          <DialogContent className="max-w-xl gap-0 overflow-hidden rounded-xl p-0 shadow-2xl sm:rounded-2xl">
 
             {/* ── Gradient Header ── */}
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background px-6 pt-6 pb-4 border-b border-border/50 pr-14">
-              <div className="flex items-center gap-3.5">
+            <div className="border-b border-border/50 bg-gradient-to-br from-primary/10 via-primary/5 to-background px-4 pb-4 pt-5 pr-12 sm:px-6 sm:pt-6 sm:pr-14">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
@@ -1165,14 +1165,14 @@ export default function CustomerAccountDashboardPage() {
             </div>
 
             {/* ── Scrollable Form Body ── */}
-            <div className="px-6 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
 
               {/* Recipient Details */}
               <div className="space-y-3">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
                   <User className="h-3 w-3" /> Recipient Details
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="addr-fullname" className="text-xs font-semibold">
                       Full Name <span className="text-red-500">*</span>
@@ -1224,7 +1224,7 @@ export default function CustomerAccountDashboardPage() {
                       className="text-sm h-9 bg-muted/40 border-border/70"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="addr-city" className="text-xs font-semibold">City</Label>
                       <Input
@@ -1697,7 +1697,7 @@ export default function CustomerAccountDashboardPage() {
 
         {/* DELETE ACCOUNT DIALOG — Premium UI */}
         <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-          <DialogContent className="max-w-md p-0 overflow-hidden gap-0 rounded-2xl shadow-2xl">
+          <DialogContent className="max-w-md gap-0 overflow-hidden rounded-xl p-0 shadow-2xl sm:rounded-2xl">
             <div className="bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-background px-6 pt-6 pb-4 border-b border-border/50 pr-14">
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0 shadow-xs">

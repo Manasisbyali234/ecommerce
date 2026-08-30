@@ -442,7 +442,7 @@ function ProductsContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 space-y-4">
+      <div className="mx-auto max-w-7xl space-y-4 px-3 pt-3 sm:px-6 sm:pt-4 lg:px-8">
         {/* Breadcrumb Navigation */}
         <nav className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
           <Link href="/" className="hover:text-primary transition-colors">
@@ -461,9 +461,9 @@ function ProductsContent() {
         </nav>
 
         {/* Page Title & Total Item Count Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+        <div className="flex flex-col justify-between gap-3 border-b pb-2 sm:flex-row sm:items-center sm:pb-1">
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-baseline gap-2 text-lg font-extrabold tracking-tight text-foreground sm:text-2xl">
               {selectedCategory === "All" ? "All Products" : selectedCategory}
               <span className="text-sm font-normal text-muted-foreground">
                 — {filteredProducts.length} items
@@ -471,7 +471,7 @@ function ProductsContent() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Mobile Filter Toggle Button */}
             <Button
               variant="outline"
@@ -487,7 +487,7 @@ function ProductsContent() {
             </Button>
 
             {/* Sort Dropdown */}
-            <div className="flex items-center gap-2 bg-background border rounded-lg px-3 py-1.5 text-xs shadow-2xs">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-2xs sm:flex-none sm:px-3">
               <span className="text-muted-foreground font-medium hidden sm:inline">Sort by :</span>
               <select
                 value={sortBy}
@@ -506,14 +506,14 @@ function ProductsContent() {
         </div>
 
         {/* Main Workspace Layout: Left Primary Sidebar + Right Content Area */}
-        <div className="flex gap-6 items-start">
+        <div className="flex items-start gap-4 lg:gap-6">
           {/* ========================================================================= */}
           {/* LEFT SIDEBAR - PRIMARY FILTERS */}
           {/* ========================================================================= */}
           <aside
             className={`w-64 shrink-0 bg-background border rounded-xl p-4 shadow-xs space-y-6 ${
               mobileFilterOpen
-                ? "fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto rounded-none shadow-2xl"
+                ? "fixed inset-y-0 left-0 z-50 w-[min(88vw,20rem)] overflow-y-auto rounded-none shadow-2xl"
                 : "hidden lg:block sticky top-20"
             }`}
           >
@@ -731,27 +731,27 @@ function ProductsContent() {
           {/* ========================================================================= */}
           {/* RIGHT WORKSPACE: DYNAMIC TOP SECONDARY FILTERS BAR + PRODUCT GRID */}
           {/* ========================================================================= */}
-          <main className="flex-1 min-w-0 space-y-4">
+          <main className="min-w-0 flex-1 space-y-4">
             {/* TOP DYNAMIC SECONDARY FILTERS BAR */}
-            <div className="bg-background border rounded-xl p-3 shadow-xs space-y-3">
+            <div className="space-y-3 rounded-xl border bg-background p-2.5 shadow-xs sm:p-3">
               {/* Secondary Filter Pills Row */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="mobile-scrollbar-none flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
                 {secondaryFiltersConfig.map((filter) => {
                   const selectedCount = (selectedSecondaryFilters[filter.key] || []).length;
                   const isOpen = openSecondaryDropdown === filter.key;
 
                   return (
-                    <div key={filter.key} className="relative">
+                    <div key={filter.key} className="relative shrink-0 sm:shrink">
                       <button
                         type="button"
                         onClick={() => setOpenSecondaryDropdown(isOpen ? null : filter.key)}
-                        className={`h-8 px-3 rounded-full border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                        className={`flex h-8 max-w-[72vw] items-center gap-1.5 rounded-full border px-3 text-xs font-bold shadow-2xs transition-all ${
                           selectedCount > 0
                             ? "bg-amber-500 text-slate-950 border-amber-500 font-extrabold"
                             : "bg-background border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                         }`}
                       >
-                        <span>{filter.label}</span>
+                        <span className="truncate">{filter.label}</span>
                         {selectedCount > 0 && (
                           <span className="h-4 w-4 rounded-full bg-slate-950 text-white text-[10px] flex items-center justify-center font-bold">
                             {selectedCount}
@@ -762,7 +762,7 @@ function ProductsContent() {
 
                       {/* Dropdown Popover Card */}
                       {isOpen && (
-                        <div className="absolute top-full left-0 mt-2 z-50 bg-background border rounded-xl shadow-2xl p-3 min-w-[220px] max-w-xs space-y-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                        <div className="absolute left-0 top-full z-50 mt-2 w-[min(82vw,20rem)] space-y-2 rounded-xl border bg-background p-3 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150 sm:min-w-[220px]">
                           <div className="flex items-center justify-between pb-1.5 border-b text-[11px] font-extrabold uppercase text-slate-500">
                             <span>Filter by {filter.label}</span>
                             <button
@@ -851,7 +851,7 @@ function ProductsContent() {
 
             {/* PRODUCT CARDS GRID */}
             {filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-background border rounded-2xl p-8 text-center shadow-xs">
+              <div className="flex flex-col items-center justify-center rounded-xl border bg-background p-6 py-14 text-center shadow-xs sm:rounded-2xl sm:p-8 sm:py-20">
                 <Search className="h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
                 <h3 className="text-lg font-bold text-foreground mb-1">No products match your filters</h3>
                 <p className="text-xs text-muted-foreground mb-4 max-w-sm">
@@ -862,7 +862,7 @@ function ProductsContent() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
                 {filteredProducts.map((product) => {
                   const mrp = product.originalPrice || Math.round(product.price * 1.28);
                   const discountPercent = Math.round(((mrp - product.price) / mrp) * 100);
@@ -872,7 +872,7 @@ function ProductsContent() {
                   return (
                     <div
                       key={product.id}
-                      className="group relative bg-background border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                      className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-xl border bg-background transition-all duration-300 hover:shadow-xl"
                     >
                       {/* Product Image & Overlays */}
                       <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -892,7 +892,7 @@ function ProductsContent() {
                             event.stopPropagation();
                             toggleWishlist(product.id, product.name);
                           }}
-                          className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center transition-colors shadow-xs ${
+                          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full shadow-xs backdrop-blur-md transition-colors sm:right-2.5 sm:top-2.5 sm:h-8 sm:w-8 ${
                             isWishlisted
                               ? "bg-rose-500 text-white hover:bg-rose-600"
                               : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-rose-500"
@@ -904,14 +904,14 @@ function ProductsContent() {
                         </button>
 
                         {/* Top Left AD / Category Tag */}
-                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-black/60 text-white px-2 py-0.5 rounded backdrop-blur-xs">
+                        <div className="absolute left-2 top-2 flex max-w-[72%] items-center gap-1.5 sm:left-2.5 sm:top-2.5">
+                          <span className="truncate rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-xs sm:px-2 sm:text-[10px]">
                             {product.category}
                           </span>
                         </div>
 
                         {/* Rating Pill Overlaid Bottom Left */}
-                        <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 py-0.5 rounded-full shadow-xs text-[11px] font-bold text-slate-900 dark:text-slate-100">
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-slate-900 shadow-xs backdrop-blur-md dark:bg-slate-900/90 dark:text-slate-100 sm:bottom-2.5 sm:left-2.5 sm:px-2 sm:text-[11px]">
                           <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
                             {product.rating || 4.5}
                           </span>
@@ -924,16 +924,16 @@ function ProductsContent() {
                       </div>
 
                       {/* Product Content Details */}
-                      <div className="p-3.5 space-y-1.5 flex-1 flex flex-col justify-between">
+                      <div className="flex flex-1 flex-col justify-between space-y-1.5 p-2.5 sm:p-3.5">
                         <div>
                           {/* Brand Name (Bold Upper) */}
-                          <div className="text-xs font-black uppercase text-slate-900 dark:text-slate-100 tracking-wider">
+                          <div className="truncate text-[11px] font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 sm:text-xs">
                             {brand}
                           </div>
 
                           {/* Product Name */}
                           <Link href={`/products/${product.id}`}>
-                            <h3 className="font-semibold text-xs text-slate-600 dark:text-slate-300 hover:text-primary transition-colors line-clamp-1">
+                            <h3 className="line-clamp-2 text-xs font-semibold leading-snug text-slate-600 transition-colors hover:text-primary dark:text-slate-300 sm:line-clamp-1">
                               {product.name}
                             </h3>
                           </Link>
@@ -942,13 +942,13 @@ function ProductsContent() {
                         {/* Pricing Block */}
                         <div className="pt-1">
                           <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                            <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
                               {formatCurrency(product.price)}
                             </span>
-                            <span className="line-through text-xs text-slate-400 font-medium">
+                            <span className="text-[11px] font-medium text-slate-400 line-through sm:text-xs">
                               {formatCurrency(mrp)}
                             </span>
-                            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 sm:text-[11px]">
                               ({discountPercent}% OFF)
                             </span>
                           </div>
@@ -962,7 +962,7 @@ function ProductsContent() {
                               description: `${product.name} added to cart`,
                             });
                           }}
-                          className="w-full h-8 text-xs font-bold gap-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-950 mt-2 rounded-lg"
+                          className="mt-1.5 h-8 w-full gap-1 rounded-lg bg-slate-900 text-[11px] font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 sm:mt-2 sm:gap-1.5 sm:text-xs"
                         >
                           <ShoppingBag className="h-3.5 w-3.5" />
                           <span>Add to Cart</span>

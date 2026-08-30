@@ -34,10 +34,10 @@ export function CartDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent className="flex w-full flex-col sm:max-w-lg">
+      <SheetContent className="flex w-[min(100vw,32rem)] flex-col sm:max-w-lg">
         <SheetHeader className="px-1 border-b pb-3">
-          <div className="flex items-center gap-3 pr-6">
-            <SheetTitle className="flex items-center gap-2 text-lg font-semibold shrink-0">
+          <div className="flex min-w-0 items-center gap-3 pr-6">
+            <SheetTitle className="flex min-w-0 items-center gap-2 text-base font-semibold sm:text-lg">
               <ShoppingBag className="h-5 w-5 text-primary" />
               Shopping Cart ({totalItems})
             </SheetTitle>
@@ -65,16 +65,16 @@ export function CartDrawer() {
               {items.map(({ product, quantity }, index) => (
                 <div
                   key={product.id ?? index}
-                  className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-accent/40"
+                  className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-accent/40 sm:gap-4 sm:p-3"
                 >
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="h-16 w-16 rounded-md object-cover border"
+                    className="h-14 w-14 shrink-0 rounded-md border object-cover sm:h-16 sm:w-16"
                   />
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    <h4 className="font-medium text-sm truncate">{product.name}</h4>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <h4 className="truncate text-sm font-medium">{product.name}</h4>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                       <span>{product.category}</span>
                       {product.colors && product.colors.length > 0 && (
                         <span className="flex items-center gap-1 border-l pl-2 border-muted">
@@ -95,7 +95,7 @@ export function CartDrawer() {
                       {formatCurrency(product.price)}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="shrink-0 flex flex-col items-end gap-2">
                     <div className="flex items-center gap-1 rounded-md border bg-background">
                       <Button
                         variant="ghost"

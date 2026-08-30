@@ -439,9 +439,9 @@ export default function ProductDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+    <div className="mx-auto max-w-7xl space-y-8 px-3 py-5 sm:space-y-12 sm:px-6 sm:py-8 lg:px-8">
       {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-2 text-xs text-muted-foreground">
+      <nav className="mobile-scrollbar-none flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
         <Link href="/" className="hover:text-foreground transition-colors">
           Home
         </Link>
@@ -456,19 +456,19 @@ export default function ProductDetailPage({ params }: PageProps) {
       </nav>
 
       {/* Main Product Section: Gallery & Details */}
-      <div className="grid gap-10 lg:grid-cols-2 items-start">
+      <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-10">
         {/* Left Column: Multi-Image Gallery */}
         <div className="space-y-4">
-          <div className="flex flex-col-reverse sm:flex-row gap-4 items-start">
+          <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:gap-4">
             {/* Thumbnail Strip (Positioned on the Left Side of Main Image) */}
             {galleryImages.length > 1 && (
-              <div className="flex sm:flex-col items-center gap-3 overflow-x-auto sm:overflow-y-auto max-h-[500px] shrink-0 w-full sm:w-auto pb-1 sm:pb-0">
+              <div className="mobile-scrollbar-none flex w-full shrink-0 items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-col sm:gap-3 sm:overflow-y-auto sm:pb-0">
                 {galleryImages.map((imgUrl, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     onMouseEnter={() => setActiveImageIndex(idx)}
-                    className={`relative h-20 w-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
+                    className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all sm:h-20 sm:w-20 sm:rounded-xl ${
                       activeImageIndex === idx
                         ? "border-primary ring-2 ring-primary/20 scale-95 shadow-md"
                         : "border-muted opacity-70 hover:opacity-100 hover:scale-105"
@@ -490,7 +490,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                   setZoomLevel(1);
                   setLightboxOpen(true);
                 }}
-                className={`relative overflow-hidden rounded-2xl border bg-slate-950 aspect-square flex items-center justify-center group shadow-sm w-full ${
+                className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border bg-slate-950 shadow-sm group sm:rounded-2xl ${
                   activeImage ? "cursor-zoom-in" : "cursor-default"
                 }`}
               >
@@ -523,8 +523,8 @@ export default function ProductDetailPage({ params }: PageProps) {
 
               {/* Pincode Delivery Availability & Estimated Delivery Checker (Matched Width) */}
               <div className="rounded-xl border bg-muted/30 p-3 space-y-2 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground">
                     <MapPin className="h-3.5 w-3.5 text-primary" /> Delivery & Pincode Availability
                   </label>
                   {checkedPincode && !pincodeError && (
@@ -618,7 +618,7 @@ export default function ProductDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
               {product.name}
             </h1>
 
@@ -626,7 +626,7 @@ export default function ProductDetailPage({ params }: PageProps) {
             <button
               type="button"
               onClick={showReviews}
-              className="flex items-center gap-2 pt-1 rounded-sm text-left hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex flex-wrap items-center gap-2 rounded-sm pt-1 text-left hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label={`View ${reviewsList.length} customer reviews`}
             >
               <div className="flex items-center text-amber-400">
@@ -660,7 +660,7 @@ export default function ProductDetailPage({ params }: PageProps) {
               <div className="space-y-1 pt-2">
                 <div className="flex flex-wrap items-baseline gap-3">
                   {/* Large Prominent Selling Price */}
-                  <span className="text-4xl sm:text-5xl font-black text-foreground tracking-tight">
+                  <span className="text-3xl font-black tracking-tight text-foreground sm:text-5xl">
                     {formatCurrency(product.price)}
                   </span>
 
@@ -761,7 +761,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
           {/* Quantity & Action Buttons */}
           <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center sm:gap-4">
               <div className="flex items-center border rounded-xl p-1 bg-background">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -780,7 +780,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                 </button>
               </div>
 
-              <div className="space-y-0.5">
+              <div className="min-w-0 space-y-0.5">
                 <div className="flex items-baseline gap-1 text-sm text-muted-foreground">
                   <span>Total:</span>
                   <span className="text-xl font-extrabold text-foreground tracking-tight">
@@ -817,8 +817,8 @@ export default function ProductDetailPage({ params }: PageProps) {
       </div>
 
       {/* Full Width Product Highlights & Guarantees Section */}
-      <div className="rounded-2xl border bg-muted/20 p-5 shadow-xs">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center divide-y sm:divide-y-0 sm:divide-x divide-border">
+      <div className="rounded-xl border bg-muted/20 p-3 shadow-xs sm:rounded-2xl sm:p-5">
+        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 sm:gap-4 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
           {/* Free Shipping */}
           <div className="flex flex-col items-center gap-1.5 p-2">
             <Truck className="h-6 w-6 text-primary" />
@@ -873,10 +873,10 @@ export default function ProductDetailPage({ params }: PageProps) {
 
       {/* Middle Tabbed Specifications & Customer Reviews */}
       <div id="customer-reviews" className="space-y-6 pt-6 border-t scroll-mt-24">
-        <div className="flex items-center gap-4 border-b pb-3">
+        <div className="mobile-scrollbar-none flex items-center gap-4 overflow-x-auto border-b pb-3">
           <button
             onClick={() => setActiveTab("features")}
-            className={`text-sm font-bold pb-2 border-b-2 transition-all ${
+            className={`shrink-0 border-b-2 pb-2 text-sm font-bold transition-all ${
               activeTab === "features"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -887,7 +887,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
           <button
             onClick={() => setActiveTab("specs")}
-            className={`text-sm font-bold pb-2 border-b-2 transition-all ${
+            className={`shrink-0 border-b-2 pb-2 text-sm font-bold transition-all ${
               activeTab === "specs"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -898,7 +898,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
           <button
             onClick={() => setActiveTab("reviews")}
-            className={`text-sm font-bold pb-2 border-b-2 transition-all ${
+            className={`shrink-0 border-b-2 pb-2 text-sm font-bold transition-all ${
               activeTab === "reviews"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -1429,8 +1429,8 @@ export default function ProductDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          <div className="p-4 sm:p-6 rounded-2xl border bg-background shadow-xs">
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-start justify-start gap-6 lg:gap-8">
+          <div className="rounded-xl border bg-background p-3 shadow-xs sm:rounded-2xl sm:p-6">
+            <div className="flex flex-col items-stretch justify-start gap-4 lg:flex-row lg:items-start lg:gap-8">
               {/* Left Items Row with Plus signs */}
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                 {allComboItems.map((item, idx) => {
@@ -1442,7 +1442,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                     <div key={item.id} className="flex items-center gap-3 sm:gap-4">
                       {/* Item Card */}
                       <div
-                        className={`flex flex-col gap-2.5 p-3.5 border rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 w-44 sm:w-52 shrink-0 transition-all ${
+                        className={`flex w-36 shrink-0 flex-col gap-2 rounded-xl border bg-slate-50/60 p-2.5 transition-all dark:bg-slate-900/60 sm:w-52 sm:gap-2.5 sm:rounded-2xl sm:p-3.5 ${
                           isChecked
                             ? "border-amber-500/60 ring-1 ring-amber-500/20 shadow-xs"
                             : "opacity-60 border-slate-200 dark:border-slate-800"
@@ -1506,7 +1506,7 @@ export default function ProductDetailPage({ params }: PageProps) {
               </div>
 
               {/* Right Summary & Add to Cart Box */}
-              <div className="w-full lg:w-80 shrink-0 p-5 border rounded-2xl bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-background border-amber-500/30 space-y-4 flex flex-col justify-between shadow-xs">
+              <div className="flex w-full shrink-0 flex-col justify-between space-y-4 rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-background p-4 shadow-xs sm:rounded-2xl sm:p-5 lg:w-80">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-foreground">Combo Package Summary</span>
@@ -1760,7 +1760,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
       {/* Lightbox Image Zoom Popup Modal */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] p-0 overflow-hidden bg-slate-950/95 border-slate-800 text-white backdrop-blur-xl">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl p-0 overflow-hidden bg-slate-950/95 border-slate-800 text-white backdrop-blur-xl sm:w-[90vw]">
           <DialogHeader className="p-4 border-b border-slate-800/80 flex flex-row items-center justify-between space-y-0">
             <DialogTitle className="text-sm font-bold text-slate-200 flex items-center gap-2">
               <Maximize2 className="h-4 w-4 text-amber-500" />
@@ -1907,7 +1907,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
       {/* Write a Customer Review Modal Dialog */}
       <Dialog open={openAddReviewModal} onOpenChange={setOpenAddReviewModal}>
-        <DialogContent className="max-w-md p-6 space-y-4">
+        <DialogContent className="max-w-md space-y-4 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-amber-500" /> Write a Customer Review

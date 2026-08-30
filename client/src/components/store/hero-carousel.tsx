@@ -115,7 +115,7 @@ export function HeroCarousel() {
 
   // Full-Width & Full-Height Product Image Renderer (No card wrapper)
   const fullProductImage = (
-    <div className="relative w-full h-full min-h-[340px] sm:min-h-[420px] lg:min-h-[480px] overflow-hidden rounded-3xl group">
+    <div className="relative h-full min-h-[210px] w-full overflow-hidden rounded-xl group sm:min-h-[340px] sm:rounded-3xl lg:min-h-[480px]">
       <img
         src={
           currentBanner.imageUrl ||
@@ -134,10 +134,10 @@ export function HeroCarousel() {
 
   // Content Block JSX Element helper
   const renderBannerContent = (alignCenter = false) => (
-    <div className={`space-y-6 ${alignCenter ? "text-center flex flex-col items-center" : ""}`}>
+    <div className={`space-y-3 sm:space-y-6 ${alignCenter ? "text-center flex flex-col items-center" : ""}`}>
 
       <h1
-        className={`leading-[1.1] ${getFontFamilyClass(currentBanner.titleStyle?.fontFamily)} ${getFontWeightClass(currentBanner.titleStyle?.fontWeight ?? "extrabold")} ${getFontSizeClass(currentBanner.titleStyle?.fontSize, "text-4xl sm:text-5xl lg:text-6xl")}`}
+        className={`leading-[1.12] ${getFontFamilyClass(currentBanner.titleStyle?.fontFamily)} ${getFontWeightClass(currentBanner.titleStyle?.fontWeight ?? "extrabold")} ${getFontSizeClass(currentBanner.titleStyle?.fontSize, "text-3xl sm:text-5xl lg:text-6xl")}`}
         style={{ color: currentBanner.titleStyle?.color ?? "#ffffff" }}
       >
         {currentBanner.title}
@@ -153,7 +153,7 @@ export function HeroCarousel() {
       )}
 
       <p
-        className={`leading-relaxed ${alignCenter ? "max-w-2xl" : "max-w-xl"} ${getFontFamilyClass(currentBanner.bodyStyle?.fontFamily)} ${getFontWeightClass(currentBanner.bodyStyle?.fontWeight ?? "normal")} ${getFontSizeClass(currentBanner.bodyStyle?.fontSize, "text-base")}`}
+        className={`line-clamp-3 leading-relaxed sm:line-clamp-none ${alignCenter ? "max-w-2xl" : "max-w-xl"} ${getFontFamilyClass(currentBanner.bodyStyle?.fontFamily)} ${getFontWeightClass(currentBanner.bodyStyle?.fontWeight ?? "normal")} ${getFontSizeClass(currentBanner.bodyStyle?.fontSize, "text-sm sm:text-base")}`}
         style={{ color: currentBanner.bodyStyle?.color ?? "#cbd5e1" }}
       >
         {currentBanner.body}
@@ -161,10 +161,10 @@ export function HeroCarousel() {
 
       {/* Standalone Product Price Display (with Discount Price Support) */}
       {(currentBanner.price !== undefined || currentBanner.discountPrice !== undefined) && (
-        <div className={`flex items-baseline gap-3 pt-1 ${alignCenter ? "justify-center" : ""}`}>
+        <div className={`flex flex-wrap items-baseline gap-2 pt-1 sm:gap-3 ${alignCenter ? "justify-center" : ""}`}>
           {currentBanner.discountPrice !== undefined ? (
             <>
-              <span className="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight">
+              <span className="text-2xl font-black text-amber-400 tracking-tight sm:text-4xl">
                 {formatCurrency(currentBanner.discountPrice)}
               </span>
               {currentBanner.price !== undefined && (
@@ -186,10 +186,10 @@ export function HeroCarousel() {
         </div>
       )}
 
-      <div className={`flex flex-wrap items-center gap-4 pt-2 ${alignCenter ? "justify-center" : ""}`}>
+      <div className={`grid grid-cols-1 gap-2 pt-1 min-[380px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:gap-4 sm:pt-2 ${alignCenter ? "sm:justify-center" : ""}`}>
         <Button
           size="lg"
-          className="h-12 px-7 text-base font-semibold shadow-lg transition-transform hover:scale-105"
+          className="h-10 px-4 text-sm font-semibold shadow-lg transition-transform hover:scale-105 sm:h-12 sm:px-7 sm:text-base"
           style={{
             backgroundColor: currentBanner.ctaBgColor ?? undefined,
             color: currentBanner.ctaTextColor ?? undefined,
@@ -203,7 +203,7 @@ export function HeroCarousel() {
         <Button
           size="lg"
           variant="outline"
-          className="h-12 px-6 text-base font-semibold text-slate-900 border-slate-700 bg-white hover:bg-slate-100"
+          className="h-10 px-4 text-sm font-semibold text-slate-900 border-slate-700 bg-white hover:bg-slate-100 sm:h-12 sm:px-6 sm:text-base"
           onClick={handleAddToCart}
         >
           <ShoppingBag className="mr-2 h-4 w-4 text-primary" /> Add to Cart
@@ -214,7 +214,7 @@ export function HeroCarousel() {
 
   return (
     <section
-      className="relative w-full overflow-hidden text-white h-[560px] sm:h-[600px] lg:h-[640px] flex items-center shrink-0 transition-colors duration-700"
+      className="relative flex h-[520px] w-full shrink-0 items-center overflow-hidden text-white transition-colors duration-700 sm:h-[600px] lg:h-[640px]"
       style={{ backgroundColor: currentBanner.bgColor || "#090d16" }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -264,7 +264,7 @@ export function HeroCarousel() {
 
       {/* Main Container Rendering Chosen Layout */}
       {layout !== "imageOnly" && (
-        <div className="relative z-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 w-full h-full flex flex-col justify-center">
+        <div className="relative z-20 mx-auto flex h-full w-full max-w-7xl flex-col justify-center px-3 py-4 sm:px-6 sm:py-3 lg:px-8">
           {layout === "collage" ? (
             /* Layout 5: Flexible Multi-Small Banner Collage Grid */
             <div className="w-full">
@@ -309,8 +309,8 @@ export function HeroCarousel() {
             </div>
           ) : layout === "layout2" ? (
             /* Layout 2: Full Width/Height Product Image on Left, Content on Right */
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-center h-full">
-              <div className="lg:col-span-6 h-full flex items-center justify-center lg:order-1">
+            <div className="grid h-full gap-4 sm:gap-8 lg:grid-cols-12 lg:items-center">
+              <div className="flex h-full items-center justify-center lg:order-1 lg:col-span-6">
                 {fullProductImage}
               </div>
               <div className="lg:col-span-6 lg:order-2">
@@ -319,11 +319,11 @@ export function HeroCarousel() {
             </div>
           ) : (
             /* Layout 1 (Default): Content on Left, Full Width/Height Product Image on Right */
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-center h-full">
+            <div className="grid h-full gap-4 sm:gap-8 lg:grid-cols-12 lg:items-center">
               <div className="lg:col-span-6 lg:order-1">
                 {renderBannerContent(false)}
               </div>
-              <div className="lg:col-span-6 h-full flex items-center justify-center lg:order-2">
+              <div className="flex h-full items-center justify-center lg:order-2 lg:col-span-6">
                 {fullProductImage}
               </div>
             </div>
@@ -337,14 +337,14 @@ export function HeroCarousel() {
           <button
             onClick={prevSlide}
             aria-label="Previous slide"
-            className="absolute left-4 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/80 text-white border border-slate-700 backdrop-blur transition-all hover:bg-primary hover:border-primary"
+            className="absolute left-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/80 text-white border border-slate-700 backdrop-blur transition-all hover:bg-primary hover:border-primary sm:left-4 sm:h-10 sm:w-10"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={nextSlide}
             aria-label="Next slide"
-            className="absolute right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/80 text-white border border-slate-700 backdrop-blur transition-all hover:bg-primary hover:border-primary"
+            className="absolute right-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/80 text-white border border-slate-700 backdrop-blur transition-all hover:bg-primary hover:border-primary sm:right-4 sm:h-10 sm:w-10"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
