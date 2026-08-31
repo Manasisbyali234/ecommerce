@@ -18,10 +18,14 @@ import {
   Minus,
   Check,
   LocateFixed,
+  Award,
+  Truck,
+  Headphones,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
-import { useStore, store, hydrateCustomerStore, type Coupon, type CustomerAddress } from "@/lib/store";
+import { useStore, hydrateCustomerStore, type CustomerAddress, type CustomerTier } from "@/lib/store";
 import { evaluateCoupon, type CartLine } from "@/lib/coupons";
 import { api, getAccessToken } from "@/lib/api";
 import {
@@ -37,9 +41,32 @@ import { Separator } from "@/components/ui/separator";
 const SHIPPING_COST = 50; // ₹50 shipping
 const TAX_RATE = 0.08;
 
+function qualifiesForTier(tier: CustomerTier, completedOrders: number, lifetimeSpend: number) {
+  return completedOrders >= Number(tier.minOrders || 0) && lifetimeSpend >= Number(tier.minTotalSpent || 0);
+}
+
+function isAllCategory(value?: string) {
+  return !value || ["all", "all categories"].includes(value.trim().toLowerCase());
+}
+
+function isAllSubCategory(value?: string) {
+  return !value || ["all", "all subcategories"].includes(value.trim().toLowerCase());
+}
+
+function tierBenefitPercent(line: CartLine, tier: CustomerTier | null) {
+  if (!tier) return 0;
+  return (tier.categoryBenefits || []).reduce((max, benefit) => {
+    const categoryMatches = isAllCategory(benefit.category) || benefit.category === line.category;
+    const subCategoryMatches = isAllSubCategory(benefit.subCategory) || benefit.subCategory === line.subCategory;
+    return categoryMatches && subCategoryMatches ? Math.max(max, Number(benefit.discountPercent || 0)) : max;
+  }, 0);
+}
+
 export default function StorefrontCheckoutPage() {
   const { items, subtotal, updateQuantity, removeItem, clearCart } = useCart();
   const coupons = useStore((s) => s.coupons);
+  const orders = useStore((s) => s.orders);
+  const customerTiers = useStore((s) => s.customerTiers);
   const savedAddresses = useStore((s) => s.customerAddresses).map((address) => ({ ...address, name: address.fullName, label: address.type }));
   const router = useRouter();
 
@@ -92,6 +119,7 @@ export default function StorefrontCheckoutPage() {
         productId: i.product.id,
         name: i.product.name,
         category: i.product.category,
+        subCategory: i.product.subCategory,
         price: i.product.price,
         qty: i.quantity,
         image: i.product.image,
@@ -106,10 +134,29 @@ export default function StorefrontCheckoutPage() {
     return evaluateCoupon(appliedCoupon, cartLines, subtotal, SHIPPING_COST);
   }, [appliedCoupon, cartLines, subtotal]);
 
+  const tierStats = useMemo(() => {
+    const completed = orders.filter((order) => order.status === "delivered");
+    return {
+      completedOrders: completed.length,
+      lifetimeSpend: completed.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    };
+  }, [orders]);
+
+  const activeTier = useMemo(() => {
+    return customerTiers
+      .filter((tier) => qualifiesForTier(tier, tierStats.completedOrders, tierStats.lifetimeSpend))
+      .sort((a, b) => (Number(b.minTotalSpent || 0) - Number(a.minTotalSpent || 0)) || (Number(b.minOrders || 0) - Number(a.minOrders || 0)))[0] || null;
+  }, [customerTiers, tierStats]);
+
+  const tierDiscount = useMemo(() => {
+    if (!activeTier) return 0;
+    return cartLines.reduce((sum, line) => sum + ((line.price * line.qty) * tierBenefitPercent(line, activeTier) / 100), 0);
+  }, [activeTier, cartLines]);
+
   const discount = evaluation?.ok ? evaluation.discount : 0;
-  const shippingDiscount = evaluation?.ok ? evaluation.shippingDiscount : 0;
+  const shippingDiscount = Math.max(evaluation?.ok ? evaluation.shippingDiscount : 0, activeTier?.freeShipping ? SHIPPING_COST : 0);
   const shipping = Math.max(0, SHIPPING_COST - shippingDiscount);
-  const taxable = Math.max(0, subtotal - discount);
+  const taxable = Math.max(0, subtotal - discount - tierDiscount);
   const tax = taxable * TAX_RATE;
   const total = taxable + shipping + tax;
 
@@ -202,7 +249,7 @@ export default function StorefrontCheckoutPage() {
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to place order"); }
   };
 
-  const availableCoupons = coupons.filter((c) => c.active);
+  const availableCoupons = coupons.filter((c) => evaluateCoupon(c, cartLines, subtotal, SHIPPING_COST).ok);
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-3 py-5 sm:space-y-8 sm:px-6 sm:py-10 lg:px-8">
@@ -627,6 +674,13 @@ export default function StorefrontCheckoutPage() {
                 </div>
               )}
 
+              {activeTier && tierDiscount > 0 && (
+                <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  <span>{activeTier.name} benefits</span>
+                  <span>-{formatCurrency(tierDiscount)}</span>
+                </div>
+              )}
+
               {/* Shipping */}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Standard Delivery</span>
@@ -652,6 +706,48 @@ export default function StorefrontCheckoutPage() {
               </div>
             </CardContent>
           </Card>
+
+          {activeTier && (
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Award className="h-4 w-4 text-primary" /> Customer Tier
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Badge variant="outline" className={`text-xs font-extrabold uppercase ${activeTier.badgeColor}`}>
+                    {activeTier.name}
+                  </Badge>
+                  <span className="text-[11px] text-muted-foreground">
+                    {tierStats.completedOrders} completed orders - {formatCurrency(tierStats.lifetimeSpend)} lifetime
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {tierDiscount > 0 && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-emerald-600 border-emerald-500/20 bg-emerald-500/10">
+                      {formatCurrency(tierDiscount)} tier discount
+                    </Badge>
+                  )}
+                  {activeTier.freeShipping && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-blue-600 border-blue-500/20 bg-blue-500/10 gap-1">
+                      <Truck className="h-3 w-3" /> Free shipping
+                    </Badge>
+                  )}
+                  {activeTier.prioritySupport && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-purple-600 border-purple-500/20 bg-purple-500/10 gap-1">
+                      <Headphones className="h-3 w-3" /> Priority support
+                    </Badge>
+                  )}
+                  {activeTier.cashbackPercent > 0 && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-emerald-600 border-emerald-500/20 bg-emerald-500/10 gap-1">
+                      <Wallet className="h-3 w-3" /> {activeTier.cashbackPercent}% cashback
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Coupon Code Applying Block */}
           <Card className="border shadow-sm">

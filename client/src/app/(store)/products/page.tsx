@@ -252,15 +252,6 @@ function ProductsContent() {
     return counts;
   }, [initialProducts]);
 
-  // Extract category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    initialProducts.forEach((p) => {
-      counts[p.category] = (counts[p.category] || 0) + 1;
-    });
-    return counts;
-  }, [initialProducts]);
-
   // Filtered and Sorted Products
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((product) => {
@@ -371,6 +362,15 @@ function ProductsContent() {
     sortBy,
     initialProducts,
   ]);
+
+  // Extract category counts for the currently visible product set.
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredProducts.forEach((p) => {
+      counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return counts;
+  }, [filteredProducts]);
 
   // Toggle brand checkbox
   const toggleBrand = (brand: string) => {
@@ -592,7 +592,7 @@ function ProductsContent() {
                     />
                     <span>All Categories</span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground">({initialProducts.length})</span>
+                  <span className="text-[11px] text-muted-foreground">({filteredProducts.length})</span>
                 </label>
                 {Object.entries(categoryCounts)
                   .filter(([cat]) => cat.toLowerCase().includes(categorySearch.toLowerCase()))

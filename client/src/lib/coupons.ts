@@ -4,6 +4,7 @@ export type CartLine = {
   productId: string;
   name: string;
   category: string;
+  subCategory?: string;
   price: number;
   qty: number;
   image?: string;
@@ -25,7 +26,7 @@ export function evaluateCoupon(
 ): CouponEvaluation {
   const zero: CouponEvaluation = { ok: false, discount: 0, shippingDiscount: 0 };
   if (!coupon.active) return { ...zero, reason: "This coupon is not active" };
-  if (new Date(coupon.expires) < new Date("2026-07-28"))
+  if (new Date(coupon.expires) < new Date())
     return { ...zero, reason: "This coupon has expired" };
   if (coupon.used >= coupon.usageLimit)
     return { ...zero, reason: "Coupon usage limit reached" };

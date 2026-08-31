@@ -25,6 +25,8 @@ export type Coupon = {
   active: boolean;
 };
 
+type CouponPayload = Omit<Coupon, "id" | "used">;
+
 export type BannerKind = "announcement" | "hero";
 export type Placement = "top" | "homepage" | "checkout" | "sidebar" | "after_hero" | "after_category" | "after_mega_deals";
 export type Orientation = "landscape" | "portrait";
@@ -1134,17 +1136,19 @@ export async function hydrateStorefront() {
   const content = async <T extends object>(type: string) => (await api<{ items: PublicContent<T>[] }>(`/content/${type}`)).items;
   const configuration = async <T extends object>(key: string) => (await api<{ value: T }>(`/configuration/${key}`)).value;
   const settled = await Promise.allSettled([
-    content<Omit<Banner, "id">>("banners"), content<Omit<CategoryItem, "id">>("categories"), content<Omit<SubCategory, "id">>("sub-categories"), content<Omit<NavCategoryGroup, "id">>("nav-categories"), content<Omit<SidebarOption, "id">>("sidebar-options"), configuration<HeaderConfig>("header"), configuration<FooterConfig>("footer"), configuration<ThemeConfig>("theme"), configuration<FaviconConfig>("favicon"),
+    content<Omit<Banner, "id">>("banners"), content<Omit<CategoryItem, "id">>("categories"), content<Omit<SubCategory, "id">>("sub-categories"), content<Omit<NavCategoryGroup, "id">>("nav-categories"), content<Omit<SidebarOption, "id">>("sidebar-options"), content<Omit<CustomerTier, "id">>("customer-tiers"), api<{ items: Coupon[] }>("/coupons").then((r) => r.items), configuration<HeaderConfig>("header"), configuration<FooterConfig>("footer"), configuration<ThemeConfig>("theme"), configuration<FaviconConfig>("favicon"),
   ]);
   const value = <T,>(index: number, fallback: T): T => settled[index].status === "fulfilled" ? settled[index].value as T : fallback;
-  const banners = value(0, [] as PublicContent<Omit<Banner, "id">>[]), categories = value(1, [] as PublicContent<Omit<CategoryItem, "id">>[]), subCategories = value(2, [] as PublicContent<Omit<SubCategory, "id">>[]), navCategories = value(3, [] as PublicContent<Omit<NavCategoryGroup, "id">>[]), sidebarOptions = value(4, [] as PublicContent<Omit<SidebarOption, "id">>[]), header = value(5, {} as HeaderConfig), footer = value(6, {} as FooterConfig), theme = value(7, {} as ThemeConfig), favicon = value(8, {} as FaviconConfig);
+  const banners = value(0, [] as PublicContent<Omit<Banner, "id">>[]), categories = value(1, [] as PublicContent<Omit<CategoryItem, "id">>[]), subCategories = value(2, [] as PublicContent<Omit<SubCategory, "id">>[]), navCategories = value(3, [] as PublicContent<Omit<NavCategoryGroup, "id">>[]), sidebarOptions = value(4, [] as PublicContent<Omit<SidebarOption, "id">>[]), customerTiers = value(5, [] as PublicContent<Omit<CustomerTier, "id">>[]), coupons = value(6, [] as Coupon[]), header = value(7, {} as HeaderConfig), footer = value(8, {} as FooterConfig), theme = value(9, {} as ThemeConfig), favicon = value(10, {} as FaviconConfig);
   state = {
     ...state,
+    coupons,
     banners: banners.map(fromContent),
     categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
     subCategories: subCategories.map(fromContent),
     navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
     sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })),
+    customerTiers: customerTiers.map(fromContent),
     headerConfig: Object.keys(header).length ? header : state.headerConfig,
     footerConfig: Object.keys(footer).length ? footer : state.footerConfig,
     themeConfig: Object.keys(theme).length ? theme : state.themeConfig,
@@ -1218,14 +1222,33 @@ export const store = {
   addCoupon(c: Coupon) {
     state.coupons = [c, ...state.coupons];
     emit();
+    const payload: CouponPayload = {
+      code: c.code,
+      description: c.description,
+      type: c.type,
+      value: c.value,
+      minSpend: c.minSpend,
+      category: c.category,
+      usageLimit: c.usageLimit,
+      expires: c.expires,
+      active: c.active,
+    };
+    api<{ coupon: Coupon }>("/admin/coupons", { method: "POST", body: JSON.stringify(payload) })
+      .then(({ coupon }) => {
+        state.coupons = state.coupons.map((item) => (item.id === c.id ? coupon : item));
+        emit();
+      })
+      .catch(() => undefined);
   },
   updateCoupon(id: string, patch: Partial<Coupon>) {
     state.coupons = state.coupons.map((c) => (c.id === id ? { ...c, ...patch } : c));
     emit();
+    api(`/admin/coupons/${id}`, { method: "PATCH", body: JSON.stringify(patch) }).catch(() => undefined);
   },
   removeCoupon(id: string) {
     state.coupons = state.coupons.filter((c) => c.id !== id);
     emit();
+    api(`/admin/coupons/${id}`, { method: "DELETE" }).catch(() => undefined);
   },
   incrementCouponUsage(id: string) {
     state.coupons = state.coupons.map((c) =>
