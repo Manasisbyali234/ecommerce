@@ -47,7 +47,7 @@ import { toast } from "sonner";
 import { formatCurrency, defaultAboutSections, defaultAdditionalInfo, type Product, type ProductReview, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
 import { useProducts } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart-context";
-import { api } from "@/lib/api";
+import { api, getAccessToken } from "@/lib/api";
 import { useWishlist } from "@/lib/wishlist-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -342,6 +342,10 @@ export default function ProductDetailPage({ params }: PageProps) {
   };
 
   const handleAddToCart = () => {
+    if (!getAccessToken()) {
+      toast.error("Please login first to add items to your cart.");
+      return;
+    }
     addItem(product, quantity);
     toast.success(`Added ${quantity} × ${product.name} to cart!`, {
       description: selectedColor || selectedSize ? `Variant: ${selectedColor} ${selectedSize}` : undefined,
@@ -350,6 +354,10 @@ export default function ProductDetailPage({ params }: PageProps) {
   };
 
   const handleBuyNow = () => {
+    if (!getAccessToken()) {
+      toast.error("Please login first to add items to your cart.");
+      return;
+    }
     addItem(product, quantity);
     toast.success(`Proceeding to checkout with ${product.name}`);
     router.push("/checkout");
@@ -426,6 +434,10 @@ export default function ProductDetailPage({ params }: PageProps) {
   }, [allComboItems, checkedComboIds]);
 
   const handleAddComboToCart = () => {
+    if (!getAccessToken()) {
+      toast.error("Please login first to add items to your cart.");
+      return;
+    }
     const itemsToAdd = allComboItems.filter((item) => checkedComboIds.includes(item.id));
     if (itemsToAdd.length === 0) {
       toast.error("Please check at least one item to add to cart");
@@ -1633,6 +1645,10 @@ export default function ProductDetailPage({ params }: PageProps) {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!getAccessToken()) {
+                        toast.error("Please login first to add items to your cart.");
+                        return;
+                      }
                       toggleWishlist(sim.id);
                       toast.success(isFav ? "Removed from Wishlist" : "Saved to Wishlist");
                     }}
@@ -1671,6 +1687,10 @@ export default function ProductDetailPage({ params }: PageProps) {
                     size="sm"
                     className="w-full h-8 text-xs font-semibold gap-1.5 mt-2 cursor-pointer"
                     onClick={() => {
+                      if (!getAccessToken()) {
+                        toast.error("Please login first to add items to your cart.");
+                        return;
+                      }
                       addItem(sim);
                       toast.success(`Added ${sim.name} to cart!`);
                     }}
@@ -1745,6 +1765,10 @@ export default function ProductDetailPage({ params }: PageProps) {
                     size="sm"
                     className="w-full h-8 text-xs font-semibold gap-1 mt-2"
                     onClick={() => {
+                      if (!getAccessToken()) {
+                        toast.error("Please login first to add items to your cart.");
+                        return;
+                      }
                       addItem(rel);
                       toast.success(`Added ${rel.name} to cart!`);
                     }}

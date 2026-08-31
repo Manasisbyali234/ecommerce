@@ -358,7 +358,13 @@ export function StoreNavbar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                if (!getAccessToken()) {
+                  toast.error("Please login first to view your cart.");
+                  return;
+                }
+                setIsOpen(true);
+              }}
               className="relative flex h-8 items-center justify-center border-muted-foreground/20 px-2 hover:border-primary sm:h-9 sm:px-3"
             >
               <div className="relative flex items-center">

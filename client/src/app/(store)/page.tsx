@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { HeroCarousel } from "@/components/store/hero-carousel";
-import { api } from "@/lib/api";
+import { api, getAccessToken } from "@/lib/api";
 import type { CategoryItem, SubCategory } from "@/lib/store";
 
 const CATEGORIES = ["All", "Audio", "Bags", "Home", "Footwear", "Apparel", "Electronics"];
@@ -151,6 +151,10 @@ function StoreHomeContent() {
   }, [initialProducts]);
 
   const handleAddToCart = (product: Product, qty = 1) => {
+    if (!getAccessToken()) {
+      toast.error("Please login first to add items to your cart.");
+      return;
+    }
     addItem(product, qty);
     toast.success(`Added ${product.name} to cart!`, {
       description: `${qty} × ${formatCurrency(product.price)}`,

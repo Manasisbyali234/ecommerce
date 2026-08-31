@@ -42,7 +42,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (product: Product, quantity = 1) => {
     if (!getAccessToken()) {
-      toast.error("Please sign in to add items to your cart");
+      toast.error("Please login first to add items to your cart.");
       return;
     }
     const normalizedProduct = { ...product, id: (product as any)._id ?? product.id };
@@ -64,11 +64,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeItem = (productId: string) => {
+    if (!getAccessToken()) { toast.error("Please login first to add items to your cart."); return; }
     setItems((prev) => prev.filter((i) => i.product.id !== productId));
-    if (getAccessToken()) api(`/cart/items/${productId}`, { method: "DELETE" }).catch(() => undefined);
+    api(`/cart/items/${productId}`, { method: "DELETE" }).catch(() => undefined);
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
+    if (!getAccessToken()) { toast.error("Please login first to add items to your cart."); return; }
     if (quantity <= 0) {
       removeItem(productId);
       return;
@@ -76,7 +78,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i))
     );
-    if (getAccessToken()) api("/cart/items", { method: "PUT", body: JSON.stringify({ productId, quantity }) }).catch(() => undefined);
+    api("/cart/items", { method: "PUT", body: JSON.stringify({ productId, quantity }) }).catch(() => undefined);
   };
 
   const clearCart = () => {
@@ -98,7 +100,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         isOpen,
         setIsOpen,
-        openCart: () => setIsOpen(true),
+        openCart: () => {
+          if (!getAccessToken()) { toast.error("Please login first to view your cart."); return; }
+          setIsOpen(true);
+        },
       }}
     >
       {children}

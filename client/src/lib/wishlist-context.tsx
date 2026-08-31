@@ -26,7 +26,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleWishlist = async (productId: string, productName?: string) => {
-    if (!getAccessToken()) { toast.error("Please sign in to save products to your wishlist"); return; }
+    if (!getAccessToken()) { toast.error("Please login first to continue."); return; }
     try {
       const { saved } = await api<{ saved: boolean }>(`/wishlist/${productId}`, { method: "PUT" });
       if (saved) {

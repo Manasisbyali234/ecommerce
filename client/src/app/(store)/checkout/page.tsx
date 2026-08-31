@@ -43,6 +43,12 @@ export default function StorefrontCheckoutPage() {
   const savedAddresses = useStore((s) => s.customerAddresses).map((address) => ({ ...address, name: address.fullName, label: address.type }));
   const router = useRouter();
 
+  useEffect(() => {
+    if (!getAccessToken()) {
+      toast.error("Please login first to continue to checkout.");
+    }
+  }, []);
+
   // Wizard Step State (1: Cart Details, 2: Shipping Address)
   const [step, setStep] = useState<1 | 2>(1);
 
