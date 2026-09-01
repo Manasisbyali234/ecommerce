@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Product, Review, Coupon, Cart, Order, User, Content, Setting, Invoice } from "../models/index.js";
 import { requireAuth } from "../middleware/auth.js";
-import { asyncHandler, fail, publicUser } from "../utils/api.js";
+import { asyncHandler, fail, publicUser, adminUser } from "../utils/api.js";
 import { priceCart } from "../services/checkout.js";
 import { createRazorpayOrder, sendEmail, verifyRazorpayWebhook } from "../services/providers.js";
 const router = Router(); const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid id");
@@ -48,7 +48,7 @@ router.put("/cart/items",requireAuth,asyncHandler(async(req,res)=>{const body=z.
 router.delete("/cart/items/:productId",requireAuth,asyncHandler(async(req,res)=>{const cart=await Cart.findOne({user:req.user._id});if(cart){cart.items=cart.items.filter(i=>i.product.toString()!==req.params.productId);await cart.save()}res.status(204).end();}));
 router.get("/wishlist",requireAuth,asyncHandler(async(req,res)=>{await req.user.populate("wishlist");res.json({items:req.user.wishlist});}));
 router.put("/wishlist/:productId",requireAuth,asyncHandler(async(req,res)=>{const product=await Product.findById(req.params.productId);if(!product)throw fail(404,"Product not found");const ix=req.user.wishlist.findIndex(id=>id.toString()===product.id);if(ix>=0)req.user.wishlist.splice(ix,1);else req.user.wishlist.push(product._id);await req.user.save();res.json({saved:ix<0});}));
-router.get("/me",requireAuth,asyncHandler(async(req,res)=>res.json({user:publicUser(req.user)})));
+router.get("/me",requireAuth,asyncHandler(async(req,res)=>{ await req.user.populate("roleRef"); const isAdmin = req.user.role === "admin" || req.user.role === "support"; res.json({user: isAdmin ? adminUser(req.user) : publicUser(req.user)}); }));
 router.patch("/me",requireAuth,asyncHandler(async(req,res)=>{const data=z.object({fullName:z.string().trim().min(2).max(100),email:z.string().email(),altPhone:z.string().optional(),gender:z.string().optional(),dob:z.string().optional()}).parse(req.body);req.user.fullName=data.fullName;req.user.email=data.email;req.user.profile={altPhone:data.altPhone,gender:data.gender,dob:data.dob};await req.user.save();res.json({user:publicUser(req.user)});}));
 router.delete("/me",requireAuth,asyncHandler(async(req,res)=>{const {confirm}=z.object({confirm:z.string().trim()}).parse(req.body||{});if(confirm!=="DELETE")throw fail(400,"Type DELETE to confirm account deletion");if(req.user.role!=="customer")throw fail(403,"Only customer accounts can be deleted here");req.user.status="disabled";req.user.deleteRequestedAt=new Date();req.user.addresses=[];req.user.wishlist=[];await Promise.all([req.user.save(),Cart.deleteOne({user:req.user._id})]);res.status(202).json({message:"Account deletion request submitted"});}));
 router.post("/me/addresses",requireAuth,asyncHandler(async(req,res)=>{const data=address.parse(req.body);if(data.isDefault)req.user.addresses.forEach(a=>a.isDefault=false);req.user.addresses.push(data);await req.user.save();res.status(201).json({addresses:req.user.addresses});}));

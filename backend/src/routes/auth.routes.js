@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { User } from "../models/index.js";
-import { asyncHandler, fail, publicUser, tokenFor } from "../utils/api.js";
+import { asyncHandler, fail, publicUser, adminUser, tokenFor } from "../utils/api.js";
 
 // --- DEMO MODE ---
 // Fixed OTP for development/demo. Replace with real OTP generation + SMS when going live.
@@ -36,5 +36,5 @@ router.post("/verify-otp", asyncHandler(async (req, res) => {
   if (user.status !== "active") throw fail(401, "Account is unavailable");
   res.json({ token: tokenFor(user), user: publicUser(user) });
 }));
-router.post("/login", asyncHandler(async (req, res) => { const { email, password } = z.object({ email: z.string().email(), password: z.string().min(8) }).parse(req.body); const user = await User.findOne({ email: email.toLowerCase() }); if (!user?.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw fail(401, "Invalid email or password"); if (user.status !== "active") throw fail(401, "Account is unavailable"); res.json({ token: tokenFor(user), user: publicUser(user) }); }));
+router.post("/login", asyncHandler(async (req, res) => { const { email, password } = z.object({ email: z.string().email(), password: z.string().min(8) }).parse(req.body); const user = await User.findOne({ email: email.toLowerCase() }).populate("roleRef"); if (!user?.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw fail(401, "Invalid email or password"); if (user.status !== "active") throw fail(401, "Account is unavailable"); const isAdmin = user.role === "admin" || user.role === "support"; res.json({ token: tokenFor(user), user: isAdmin ? adminUser(user) : publicUser(user) }); }));
 export default router;

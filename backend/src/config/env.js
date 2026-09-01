@@ -12,7 +12,7 @@ export const env = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
   twilioFrom: process.env.TWILIO_FROM,
-  resendApiKey: process.env.RESEND_API_KEY,
+  zeptomailToken: process.env.ZEPTOMAIL_TOKEN,
   emailFrom: process.env.EMAIL_FROM,
   razorpayKeyId: process.env.RAZORPAY_KEY_ID,
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET,

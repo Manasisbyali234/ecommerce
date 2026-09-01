@@ -32,6 +32,8 @@ import {
   Shield,
   Send,
   Key,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -92,6 +94,10 @@ export default function AdminUsersPage() {
     status: "active",
     lastLogin: "Just now",
   });
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Role Edit/Create Modal State
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -105,7 +111,10 @@ export default function AdminUsersPage() {
       const loadedRoles: Role[] = roleResult.items.map((role) => ({ id: String(role.id), name: String(role.name), description: String(role.description || ""), isSuperAdmin: Boolean(role.isSuperAdmin), permissions: createFullPermissions() }));
       const fallbackRole = loadedRoles.find((role) => role.name.toLowerCase().includes("admin"))?.id || "admin";
       store.replaceRoles(loadedRoles);
-      store.replaceAdminUsers(userResult.items.map((user) => ({ id: String(user.id), name: String(user.fullName || ""), email: String(user.email || ""), roleId: String(user.role || fallbackRole), status: user.status === "disabled" ? "inactive" : "active", lastLogin: String(user.updatedAt || "Never") })));
+      store.replaceAdminUsers(userResult.items.map((user) => {
+        const roleRef = user.roleRef as Record<string, unknown> | null;
+        return { id: String(user.id), name: String(user.fullName || ""), email: String(user.email || ""), roleId: String(roleRef?.id || user.role || fallbackRole), status: user.status === "disabled" ? "inactive" : "active", lastLogin: String(user.updatedAt || "Never") };
+      }));
     }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load administrator data"));
   }, []);
 
@@ -141,6 +150,10 @@ export default function AdminUsersPage() {
       status: "active",
       lastLogin: "Never",
     });
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setSendInviteEmail(true);
     setEnforce2FA(false);
     setUserModalOpen(true);
@@ -155,6 +168,10 @@ export default function AdminUsersPage() {
       status: user.status,
       lastLogin: user.lastLogin,
     });
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setSendInviteEmail(false);
     setEnforce2FA(false);
     setUserModalOpen(true);
@@ -165,27 +182,53 @@ export default function AdminUsersPage() {
       toast.error("User Name and Email are required");
       return;
     }
-
     if (!userDraft.email.includes("@")) {
       toast.error("Please enter a valid email address");
       return;
     }
+    if (!editingUserId) {
+      if (!password) { toast.error("Password is required"); return; }
+      if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+        toast.error("Password must contain at least one uppercase letter and one number");
+        return;
+      }
+      if (password !== confirmPassword) { toast.error("Passwords do not match"); return; }
+    }
+    if (!userDraft.roleId) { toast.error("Assigned Permission Role is required"); return; }
 
     try {
     if (editingUserId) {
-      await api(`/admin/users/${editingUserId}`, { method: "PATCH", body: JSON.stringify({ fullName: userDraft.name, status: userDraft.status === "active" ? "active" : "disabled", role: userDraft.roleId === "support" ? "support" : "admin" }) });
-      store.updateAdminUser(editingUserId, userDraft);
+      const patch: Record<string, unknown> = { fullName: userDraft.name, status: userDraft.status === "active" ? "active" : "disabled", roleId: userDraft.roleId };
+      if (password) {
+        if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+        if (password !== confirmPassword) { toast.error("Passwords do not match"); return; }
+        patch.password = password;
+      }
+      const result = await api<{ user: Record<string, unknown> }>(`/admin/users/${editingUserId}`, { method: "PATCH", body: JSON.stringify(patch) });
+      const updatedRole = roles.find((r) => r.id === userDraft.roleId);
+      store.updateAdminUser(editingUserId, { ...userDraft, roleId: String(result.user.roleRef ? (result.user.roleRef as Record<string,unknown>).id || userDraft.roleId : userDraft.roleId) });
       toast.success(`User "${userDraft.name}" updated successfully!`);
     } else {
-      await api("/admin/users", { method: "POST", body: JSON.stringify({ fullName: userDraft.name, email: userDraft.email, password: crypto.randomUUID(), role: userDraft.roleId === "support" ? "support" : "admin" }) });
-      store.addAdminUser(userDraft);
-      toast.success(`User "${userDraft.name}" added live to team!`, {
+      const result = await api<{ user: Record<string, unknown> }>("/admin/users", { method: "POST", body: JSON.stringify({ fullName: userDraft.name, email: userDraft.email, password, roleId: userDraft.roleId, role: "admin" }) });
+      const newUser: Omit<AdminUser, "id"> = { ...userDraft, id: String(result.user.id), roleId: String((result.user.roleRef as Record<string,unknown>)?.id || userDraft.roleId) } as unknown as Omit<AdminUser, "id">;
+      store.addAdminUser({ ...userDraft, lastLogin: "Never" });
+      toast.success(`User "${userDraft.name}" created successfully!`, {
         description: sendInviteEmail ? `Welcome email sent to ${userDraft.email}` : "Account ready.",
       });
     }
 
     setUserModalOpen(false);
     setEditingUserId(null);
+    setPassword("");
+    setConfirmPassword("");
+    // Refresh users list from backend
+    Promise.all([api<{ items: Array<Record<string, unknown>> }>("/admin/users"), api<{ items: Array<Record<string, unknown>> }>("/admin/roles")]).then(([userResult, roleResult]) => {
+      const loadedRoles: Role[] = roleResult.items.map((role) => ({ id: String(role.id), name: String(role.name), description: String(role.description || ""), isSuperAdmin: Boolean(role.isSuperAdmin), permissions: createFullPermissions() }));
+      const fallbackRole = loadedRoles.find((r) => r.name.toLowerCase().includes("admin"))?.id || "admin";
+      store.replaceRoles(loadedRoles);
+      store.replaceAdminUsers(userResult.items.map((user) => ({ id: String(user.id), name: String(user.fullName || ""), email: String(user.email || ""), roleId: String((user.roleRef as Record<string,unknown>)?.id || user.role || fallbackRole), status: user.status === "disabled" ? "inactive" : "active", lastLogin: String(user.updatedAt || "Never") })));
+    }).catch(() => undefined);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save administrator"); }
   };
 
@@ -796,8 +839,52 @@ export default function AdminUsersPage() {
                   placeholder="e.g. aakash@metromindz.com"
                   value={userDraft.email}
                   onChange={(e) => setUserDraft({ ...userDraft, email: e.target.value })}
+                  disabled={!!editingUserId}
                   className="text-xs font-mono"
                 />
+              </div>
+
+              {/* Password fields */}
+              <div className="space-y-1">
+                <Label className="text-xs font-bold flex items-center gap-1">
+                  <Key className="h-3.5 w-3.5 text-emerald-500" /> {editingUserId ? "New Password (leave blank to keep current)" : "Password *"}
+                </Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder={editingUserId ? "Leave blank to keep current password" : "Min 8 chars, 1 uppercase, 1 number"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="text-xs pr-9"
+                  />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold flex items-center gap-1">
+                  <Key className="h-3.5 w-3.5 text-emerald-500" /> Confirm Password {!editingUserId && "*"}
+                </Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`text-xs pr-9 ${confirmPassword && password !== confirmPassword ? "border-rose-500 focus-visible:ring-rose-500" : confirmPassword && password === confirmPassword ? "border-emerald-500" : ""}`}
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
+                    {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-[11px] text-rose-500 font-semibold">Passwords do not match</p>
+                )}
+                {confirmPassword && password === confirmPassword && (
+                  <p className="text-[11px] text-emerald-500 font-semibold">Passwords match ✓</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -875,7 +962,7 @@ export default function AdminUsersPage() {
               Cancel
             </Button>
             <Button onClick={saveUser} className="text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-xs">
-              <Check className="h-4 w-4 mr-1.5" /> {editingUserId ? "Update User" : "Save Admin Account"}
+              <Check className="h-4 w-4 mr-1.5" /> {editingUserId ? "Update User" : "Create Admin User"}
             </Button>
           </DialogFooter>
         </DialogContent>
