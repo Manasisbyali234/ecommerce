@@ -90,10 +90,10 @@ export default function AdminNavCategoriesPage() {
     return navCategories.filter(
       (nc) =>
         nc.name.toLowerCase().includes(q) ||
-        nc.categories.some(
+        (nc.categories ?? []).some(
           (c) =>
             c.name.toLowerCase().includes(q) ||
-            c.subcategories.some((s) => s.toLowerCase().includes(q))
+            (c.subcategories ?? []).some((s) => s.toLowerCase().includes(q))
         )
     );
   }, [navCategories, searchQuery]);
@@ -103,9 +103,10 @@ export default function AdminNavCategoriesPage() {
     let totalCategories = 0;
     let totalSubcategories = 0;
     navCategories.forEach((v) => {
-      totalCategories += v.categories.length;
-      v.categories.forEach((c) => {
-        totalSubcategories += c.subcategories.length;
+      const cats = v.categories ?? [];
+      totalCategories += cats.length;
+      cats.forEach((c) => {
+        totalSubcategories += (c.subcategories ?? []).length;
       });
     });
     return {

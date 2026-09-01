@@ -6,6 +6,7 @@ import { Product, Coupon, Order, Review, User, Role, Setting, Content, Invoice, 
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { asyncHandler, fail, adminUser } from "../utils/api.js";
 import { sendEmail, verifyRazorpayCredentials, createCarrierLabel, trackCarrierShipment } from "../services/providers.js";
+import { sendOutForDeliveryEmail, sendDeliveredEmail } from "../services/notifications.js";
 import { uploadR2Image, deleteR2Image } from "../services/r2.js";
 import { env } from "../config/env.js";
 
@@ -147,6 +148,11 @@ router.patch("/orders/:id", requirePermission("orders:update"), asyncHandler(asy
   const data=z.object({status:z.enum(["pending","processing","shipped","delivered","cancelled"]).optional(),paymentStatus:z.enum(["paid","unpaid","refunded"]).optional(),shipment:z.object({carrier:z.string().min(2).max(80),tracking:z.string().min(2).max(100),status:z.enum(["label_created","in_transit","out_for_delivery","delivered","returned"]),eta:z.coerce.date().optional()}).optional()}).parse(req.body);
   const order=await Order.findByIdAndUpdate(req.params.id,data,{new:true,runValidators:true});
   if(!order)throw fail(404,"Order not found");
+  const customerEmail=order.customer?.email;
+  if(customerEmail){
+    if(data.status==="shipped")sendOutForDeliveryEmail(order,customerEmail).catch(()=>{});
+    else if(data.status==="delivered")sendDeliveredEmail(order,customerEmail).catch(()=>{});
+  }
   res.json({order});
 }));
 
