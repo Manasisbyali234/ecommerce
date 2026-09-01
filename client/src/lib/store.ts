@@ -1146,7 +1146,7 @@ export async function hydrateStorefront() {
     banners: banners.map(fromContent),
     categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
     subCategories: subCategories.map(fromContent),
-    navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })),
+    navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title, categories: item.data.categories ?? [] })),
     sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })),
     customerTiers: customerTiers.map(fromContent),
     headerConfig: Object.keys(header).length ? header : state.headerConfig,
@@ -1171,7 +1171,7 @@ export async function hydrateAdminStore() {
     ...state, coupons,
     orders: orders.map((order) => ({ id: String(order.id), customer: String((order.customer as Record<string, unknown>)?.fullName || "Customer"), email: String((order.customer as Record<string, unknown>)?.email || ""), total: Number(order.total || 0), items: Array.isArray(order.items) ? order.items.map((item) => { const line = item as Record<string, unknown>; return { id: String(line.product || line.id || ""), title: String(line.name || "Product"), price: Number(line.unitPrice || line.price || 0), qty: Number(line.quantity || line.qty || 1), image: String(line.image || "") }; }) : 0, status: order.status as Order["status"], paymentStatus: order.paymentStatus as Order["paymentStatus"], paymentMethod: String(order.paymentMethod || ""), date: String(order.createdAt || "").slice(0, 10) })),
     invoices: invoices.map((invoice) => ({ id: String(invoice.id), orderId: String((invoice.order as Record<string, unknown>)?.id || invoice.order || ""), customer: "Customer", amount: Number(invoice.amount || 0), status: invoice.status as Invoice["status"], issued: String(invoice.issuedAt || "").slice(0, 10), due: String(invoice.dueAt || "").slice(0, 10) })),
-    categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })), subCategories: subCategories.map(fromContent), banners: banners.map(fromContent), navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })), sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })), customerTiers: customerTiers.map(fromContent),
+    categories: categories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title })), subCategories: subCategories.map(fromContent), banners: banners.map(fromContent), navCategories: navCategories.map((item) => ({ ...fromContent(item), name: item.data.name || item.title, categories: item.data.categories ?? [] })), sidebarOptions: sidebarOptions.map((item) => ({ ...fromContent(item), label: item.data.label || item.title })), customerTiers: customerTiers.map(fromContent),
     headerConfig: Object.keys(header || {}).length ? header : state.headerConfig, footerConfig: Object.keys(footer || {}).length ? footer : state.footerConfig, themeConfig: Object.keys(theme || {}).length ? theme : state.themeConfig, faviconConfig: Object.keys(favicon || {}).length ? favicon : state.faviconConfig,
   };
   emit();

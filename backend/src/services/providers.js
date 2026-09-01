@@ -13,9 +13,12 @@ export async function sendOtp(phone, code) {
   return { provider: "twilio" };
 }
 
-export async function sendEmail({ to, subject, html }) {
-  if (!env.resendApiKey || !env.emailFrom) return { sent: false, reason: "Email provider is not configured" };
-  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${env.resendApiKey}`, "content-type": "application/json" }, body: JSON.stringify({ from: env.emailFrom, to: [to], subject, html }) });
+export async function sendEmail({ to, subject, html, senderName, replyTo }) {
+  if (!env.zeptomailToken || !env.emailFrom) return { sent: false, reason: "Email provider is not configured" };
+  const from = { address: env.emailFrom, name: senderName || "Metromindz" };
+  const body = { from, to: [{ email_address: { address: to } }], subject, htmlbody: html };
+  if (replyTo) body.reply_to = [{ address: replyTo }];
+  const response = await fetch("https://api.zeptomail.in/v1.1/email", { method: "POST", headers: { authorization: `Zoho-enczapikey ${env.zeptomailToken}`, "content-type": "application/json" }, body: JSON.stringify(body) });
   if (!response.ok) throw fail(502, "Unable to send email through provider");
   return { sent: true };
 }

@@ -60,7 +60,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       api("/cart/items", { method: "PUT", body: JSON.stringify({ productId: normalizedProduct.id, quantity }) }).catch(() => undefined);
       return [...prev, { product: normalizedProduct, quantity }];
     });
-    setIsOpen(true);
   };
 
   const removeItem = (productId: string) => {

@@ -23,6 +23,7 @@ import {
   Layers,
   Zap,
   ArrowRight,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useStore, store, type Coupon, type CouponType } from "@/lib/store";
@@ -71,6 +72,8 @@ const typeMeta: Record<CouponType, { label: string; icon: typeof Percent; color:
 export default function CouponsPage() {
   const coupons = useStore((s) => s.coupons);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Coupon | null>(null);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -118,6 +121,33 @@ export default function CouponsPage() {
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success(`Copied "${code}" to clipboard!`);
+  };
+
+  const openEdit = (c: Coupon) => {
+    setEditTarget({ ...c });
+    setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    if (!editTarget) return;
+    if (!editTarget.code.trim()) {
+      toast.error("Coupon code is required");
+      return;
+    }
+    store.updateCoupon(editTarget.id, {
+      code: editTarget.code.toUpperCase(),
+      description: editTarget.description,
+      type: editTarget.type,
+      value: editTarget.value,
+      minSpend: editTarget.minSpend,
+      category: editTarget.category,
+      usageLimit: editTarget.usageLimit,
+      expires: editTarget.expires,
+      active: editTarget.active,
+    });
+    setEditOpen(false);
+    setEditTarget(null);
+    toast.success("Coupon updated successfully!");
   };
 
   const create = () => {
@@ -181,6 +211,126 @@ export default function CouponsPage() {
             Build promotional codes, cart thresholds, BOGO offers, and category-wide discounts.
           </p>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-lg p-6">
+            <DialogHeader className="pb-3 border-b">
+              <DialogTitle className="text-base font-extrabold flex items-center gap-2">
+                <Pencil className="h-4 w-4 text-amber-500" /> Edit Coupon Rule
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Update discount code conditions and checkout rewards.
+              </DialogDescription>
+            </DialogHeader>
+            {editTarget && (
+              <div className="grid gap-3 py-2 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Coupon Code *</Label>
+                    <Input
+                      placeholder="e.g. METRO500"
+                      className="uppercase font-mono font-bold"
+                      value={editTarget.code}
+                      onChange={(e) => setEditTarget({ ...editTarget, code: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Discount Type</Label>
+                    <Select
+                      value={editTarget.type}
+                      onValueChange={(v: CouponType) => setEditTarget({ ...editTarget, type: v })}
+                    >
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage OFF (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount OFF (₹)</SelectItem>
+                        <SelectItem value="bogo">Buy 1 Get 1 (BOGO)</SelectItem>
+                        <SelectItem value="free_shipping">Free Shipping</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">Promotion Description</Label>
+                  <Input
+                    placeholder="e.g. Flat ₹500 OFF on orders above ₹1,999"
+                    value={editTarget.description}
+                    onChange={(e) => setEditTarget({ ...editTarget, description: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Value (% or ₹)</Label>
+                    <Input
+                      type="number"
+                      value={editTarget.value}
+                      onChange={(e) => setEditTarget({ ...editTarget, value: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Min Cart Spend (₹)</Label>
+                    <Input
+                      type="number"
+                      value={editTarget.minSpend}
+                      onChange={(e) => setEditTarget({ ...editTarget, minSpend: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Usage Limit</Label>
+                    <Input
+                      type="number"
+                      value={editTarget.usageLimit}
+                      onChange={(e) => setEditTarget({ ...editTarget, usageLimit: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Category Restriction</Label>
+                    <Select
+                      value={editTarget.category}
+                      onValueChange={(v) => setEditTarget({ ...editTarget, category: v })}
+                    >
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Expiry Date</Label>
+                    <Input
+                      type="date"
+                      value={editTarget.expires}
+                      onChange={(e) => setEditTarget({ ...editTarget, expires: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border p-3 bg-muted/20">
+                  <div>
+                    <div className="text-xs font-bold text-foreground">Active</div>
+                    <div className="text-[11px] text-muted-foreground">Customers can apply code at checkout</div>
+                  </div>
+                  <Switch
+                    checked={editTarget.active}
+                    onCheckedChange={(v) => setEditTarget({ ...editTarget, active: v })}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter className="pt-3 border-t gap-2">
+              <Button variant="outline" onClick={() => setEditOpen(false)} className="text-xs font-semibold">
+                Cancel
+              </Button>
+              <Button onClick={saveEdit} className="text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-xs">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <div className="flex items-center gap-2 flex-wrap">
           <Button
@@ -533,6 +683,15 @@ export default function CouponsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => openEdit(c)}
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-amber-300"
+                      title="Edit Coupon"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => remove(c.id)}
                       className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500"
                       title="Delete Coupon"
@@ -617,14 +776,25 @@ export default function CouponsPage() {
                         <Switch checked={c.active} onCheckedChange={() => toggle(c.id)} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(c.id)}
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(c)}
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-amber-300"
+                            title="Edit Coupon"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(c.id)}
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -4,7 +4,56 @@ const TOKEN_KEY = "metromindz_access_token";
 
 export function getAccessToken() { return typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY); }
 export function setAccessToken(token: string) { localStorage.setItem(TOKEN_KEY, token); }
-export function clearAccessToken() { localStorage.removeItem(TOKEN_KEY); }
+export function clearAccessToken() { localStorage.removeItem(TOKEN_KEY); clearAdminSession(); }
+
+// Admin session — stored only in memory, never persisted to localStorage/sessionStorage
+export type AdminRoleInfo = {
+  id: string;
+  name: string;
+  email?: string;
+  isSuperAdmin: boolean;
+  permissions: string[]; // e.g. ["products:read", "products:create", ...]
+};
+
+const ADMIN_ROLE_KEY = "metromindz_admin_role";
+
+let _adminRole: AdminRoleInfo | null = null;
+const _roleListeners = new Set<() => void>();
+
+export function subscribeAdminRole(fn: () => void) {
+  _roleListeners.add(fn);
+  return () => _roleListeners.delete(fn);
+}
+
+export function setAdminRole(role: AdminRoleInfo | null) {
+  _adminRole = role;
+  if (typeof window !== "undefined") {
+    if (role) sessionStorage.setItem(ADMIN_ROLE_KEY, JSON.stringify(role));
+    else sessionStorage.removeItem(ADMIN_ROLE_KEY);
+  }
+  _roleListeners.forEach((fn) => fn());
+}
+
+export function getAdminRole(): AdminRoleInfo | null {
+  if (_adminRole) return _adminRole;
+  if (typeof window !== "undefined") {
+    const stored = sessionStorage.getItem(ADMIN_ROLE_KEY);
+    if (stored) { try { _adminRole = JSON.parse(stored); } catch { /* ignore */ } }
+  }
+  return _adminRole;
+}
+
+export function clearAdminSession() {
+  _adminRole = null;
+  if (typeof window !== "undefined") sessionStorage.removeItem(ADMIN_ROLE_KEY);
+  _roleListeners.forEach((fn) => fn());
+}
+
+export function hasPermission(permission: string): boolean {
+  if (!_adminRole) return false;
+  if (_adminRole.isSuperAdmin) return true;
+  return _adminRole.permissions.includes(permission);
+}
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
@@ -47,5 +96,5 @@ export async function downloadApiFile(path: string, fallbackName: string) {
 export const authApi = {
   requestOtp: (phone: string) => api<{ message: string; debugOtp?: string }>("/auth/request-otp", { method: "POST", body: JSON.stringify({ phone }) }),
   verifyOtp: (phone: string, otp: string) => api<{ token: string; user: { phone?: string; fullName?: string } }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp }) }),
-  adminLogin: (email: string, password: string) => api<{ token: string; user: { role: string; fullName?: string; email?: string } }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  adminLogin: (email: string, password: string) => api<{ token: string; user: { role: string; fullName?: string; email?: string; roleRef?: AdminRoleInfo | null } }>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 };

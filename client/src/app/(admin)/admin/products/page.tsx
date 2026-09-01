@@ -1416,8 +1416,9 @@ export default function ProductsPage() {
           </DialogHeader>
 
           {/* Modal Body with Scrollable Tabbed Content */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+            {/* Sticky Tab Bar */}
+            <div className="shrink-0 px-5 pt-4 pb-0 border-b bg-background">
               <TabsList className="flex items-center justify-start gap-1.5 w-full h-auto p-1.5 pb-2 bg-slate-100 dark:bg-slate-900/80 border rounded-2xl overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
                 <TabsTrigger
                   value="basic"
@@ -1480,7 +1481,10 @@ export default function ProductsPage() {
                   </TabsTrigger>
                 )}
               </TabsList>
+            </div>
 
+            {/* Scrollable Tab Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {/* TAB 1: BASIC INFORMATION */}
               <TabsContent value="basic" className="space-y-4 pt-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3608,9 +3612,14 @@ export default function ProductsPage() {
                   )}
                 </div>
               </TabsContent>
+<<<<<<< HEAD
               )}
             </Tabs>
           </div>
+=======
+            </div>
+          </Tabs>
+>>>>>>> 7576a462c275af5ff4df16cff144d4c615b3c455
 
           {/* Modal Footer */}
           <DialogFooter className="p-4 border-t bg-muted/20 flex items-center justify-between shrink-0">

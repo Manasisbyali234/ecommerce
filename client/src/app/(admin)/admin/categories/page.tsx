@@ -349,25 +349,26 @@ export default function AdminCategoriesPage() {
 
       {/* Create / Edit Category Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl shadow-2xl">
-          {/* Gradient Header */}
-          <div className="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-background px-6 pt-6 pb-4 border-b border-border/50 pr-14">
+        <DialogContent className="max-w-lg p-0 overflow-hidden rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+          {/* Sticky Header */}
+          <div className="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-background px-6 py-[18px] border-b border-border/50 pr-14 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Layers className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Layers className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-foreground leading-tight">
+                <DialogTitle className="text-sm font-bold text-foreground leading-tight">
                   {editingId ? "Edit Category" : "New Category"}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                  Configure category title, URL slug, description, and storefront cover graphic.
+                <DialogDescription className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                  Configure title, slug, description, and cover graphic.
                 </DialogDescription>
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-5 space-y-4">
+          {/* Scrollable Body */}
+          <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1 [scrollbar-width:thin] [scrollbar-color:hsl(var(--border))_transparent]">
             {/* Category Name */}
             <div className="space-y-1.5">
               <Label htmlFor="cat-name" className="text-xs font-bold">Category Name <span className="text-red-500">*</span></Label>
@@ -385,7 +386,7 @@ export default function AdminCategoriesPage() {
                       slug: draft.slug ? draft.slug : val.toLowerCase().replace(/\s+/g, "-"),
                     });
                   }}
-                  className="pl-9 text-xs h-9 bg-muted/40 border-border/70 font-semibold"
+                  className="pl-9 text-xs h-11 bg-muted/40 border-border/70 font-semibold"
                 />
               </div>
             </div>
@@ -400,7 +401,7 @@ export default function AdminCategoriesPage() {
                   placeholder="e.g. apparel"
                   value={draft.slug}
                   onChange={(e) => setDraft({ ...draft, slug: e.target.value })}
-                  className="pl-9 text-xs h-9 bg-muted/40 border-border/70 font-mono font-semibold"
+                  className="pl-9 text-xs h-11 bg-muted/40 border-border/70 font-mono font-semibold"
                 />
               </div>
             </div>
@@ -415,19 +416,20 @@ export default function AdminCategoriesPage() {
                   placeholder="Short tagline summarizing category products..."
                   value={draft.description || ""}
                   onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                  className="pl-9 text-xs h-20 bg-muted/40 border-border/70 resize-none font-semibold"
+                  className="pl-9 text-xs bg-muted/40 border-border/70 resize-none font-semibold"
+                  style={{ height: "84px" }}
                 />
               </div>
             </div>
 
             {/* Image Preview & Upload Controls */}
-            <div className="space-y-2.5 pt-3 border-t">
+            <div className="space-y-2 pt-3 border-t">
               <Label className="text-xs font-bold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider">
                 <ImageIcon className="h-3.5 w-3.5 text-purple-500" /> Cover Graphic Image
               </Label>
 
-              <div className="flex flex-col sm:flex-row gap-3 items-center bg-muted/20 p-3 rounded-xl border">
-                <div className="relative aspect-video w-28 overflow-hidden rounded-lg border bg-slate-950 shadow-xs flex-shrink-0">
+              <div className="flex gap-3 items-center bg-muted/20 p-3 rounded-xl border">
+                <div className="relative aspect-video w-24 overflow-hidden rounded-lg border bg-slate-950 shadow-xs flex-shrink-0">
                   {draft.image ? (
                     <img src={draft.image} alt="Preview" className="h-full w-full object-cover" />
                   ) : (
@@ -437,12 +439,12 @@ export default function AdminCategoriesPage() {
                   )}
                 </div>
 
-                <div className="flex-1 w-full space-y-2">
+                <div className="flex-1 space-y-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="w-full text-xs font-bold gap-1 bg-background shadow-2xs border"
+                    className="w-full text-xs font-bold gap-1 bg-background shadow-2xs border h-9"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="h-3.5 w-3.5 text-purple-500" /> Upload Cover File
@@ -461,7 +463,7 @@ export default function AdminCategoriesPage() {
                       placeholder="Or enter image URL link..."
                       value={draft.image || ""}
                       onChange={(e) => setDraft({ ...draft, image: e.target.value })}
-                      className="pl-11 text-xs h-8 bg-background border"
+                      className="pl-11 text-xs h-9 bg-background border"
                     />
                   </div>
                 </div>
@@ -469,19 +471,20 @@ export default function AdminCategoriesPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-border/40 bg-muted/20">
+          {/* Sticky Footer */}
+          <div className="flex items-center justify-end gap-2.5 px-6 py-[18px] border-t border-border/40 bg-muted/20 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setOpen(false)}
-              className="h-9 px-4 text-xs font-semibold"
+              className="h-10 px-4 text-xs font-semibold"
             >
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={saveCategory}
-              className="h-9 px-5 text-xs font-bold gap-1.5 bg-purple-600 hover:bg-purple-500 text-white shadow-xs"
+              className="h-10 px-5 text-xs font-bold gap-1.5 bg-purple-600 hover:bg-purple-500 text-white shadow-xs"
             >
               <Check className="h-3.5 w-3.5" />
               {editingId ? "Update Category" : "Publish Category"}

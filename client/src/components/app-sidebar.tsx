@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { hasPermission, getAdminRole, subscribeAdminRole } from "@/lib/api";
 
 export function AppSidebar() {
   const currentPath = usePathname();
@@ -92,7 +93,7 @@ export function AppSidebar() {
   };
 
   // Group 1: Overview
-  const showOverviewGroup = matches("Dashboard") || matches("Analytics");
+  const showOverviewGroup = (matches("Dashboard") && hasPermission("dashboard:read")) || (matches("Analytics") && hasPermission("analytics:read"));
   
   // Sections sub-items list for search
   const sectionsSubItems = [
@@ -105,13 +106,13 @@ export function AppSidebar() {
 
   // Group 2: Commerce Operations
   const showCommerceGroup =
-    matches("Products") ||
-    matches("Product Reviews") ||
-    matches("Orders") ||
-    matches("Invoices") ||
-    matches("Shipping Operations") ||
-    matches("Customers") ||
-    matches("Coupons & Discounts");
+    (matches("Products") && hasPermission("products:read")) ||
+    (matches("Product Reviews") && hasPermission("products:read")) ||
+    (matches("Orders") && hasPermission("orders:read")) ||
+    (matches("Invoices") && hasPermission("invoices:read")) ||
+    (matches("Shipping Operations") && hasPermission("shipping:read")) ||
+    (matches("Customers") && hasPermission("customers:read")) ||
+    (matches("Coupons & Discounts") && hasPermission("coupons:read"));
 
   // Website sub-items list for search
   const websiteSubItems = [
@@ -139,11 +140,15 @@ export function AppSidebar() {
   const showMasterSettingsMenu = matches("Master Settings", settingsSubItems);
 
   // System Group
-  const showSystemGroup = showWebsiteMenu || showMasterSettingsMenu || matches("Users & Roles");
+  const showSystemGroup = showWebsiteMenu || showMasterSettingsMenu || (matches("Users & Roles") && hasPermission("users:read"));
+
+  const [staffRole, setStaffRole] = useState(getAdminRole);
+
+  useEffect(() => subscribeAdminRole(() => setStaffRole(getAdminRole())), []);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar/95 backdrop-blur-md">
-      {/* Sidebar Header: Brand & Dashboard Title */}
+      {/* Sidebar Header: Brand & Staff Profile */}
       <SidebarHeader className="border-b border-sidebar-border/60 pb-3 pt-3">
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3 min-w-0">
@@ -154,10 +159,45 @@ export function AppSidebar() {
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-bold tracking-tight truncate text-foreground">Metromindz</span>
               </div>
-              <span className="text-[11px] text-muted-foreground truncate font-medium">Super Admin Console</span>
+              {staffRole?.email ? (
+                <span className="text-[11px] text-muted-foreground truncate font-medium">{staffRole.email}</span>
+              ) : (
+                <span className="text-[11px] text-muted-foreground truncate font-medium opacity-50">Loading…</span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Staff profile + View Website — shown only for non-super-admin staff */}
+        {staffRole && !staffRole.isSuperAdmin && (
+          <div className="mt-2.5 px-1 group-data-[collapsible=icon]:hidden space-y-2">
+            {/* Profile row */}
+            <Link
+              href="/admin/staff/profile"
+              className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-amber-500/10 transition-colors"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-600 font-bold text-xs shrink-0">
+                {staffRole.name?.charAt(0)?.toUpperCase() || "S"}
+              </div>
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="text-xs font-semibold truncate">{staffRole.name}</span>
+                <span className="text-[10px] text-muted-foreground truncate">{staffRole.email || ""}</span>
+              </div>
+            </Link>
+            {/* View Website button */}
+            <Link
+              href="/"
+              target="_blank"
+              className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 text-primary transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold">View Website</span>
+              </div>
+              <ExternalLink className="h-3.5 w-3.5 text-primary/70" />
+            </Link>
+          </div>
+        )}
 
         {/* Quick Search Filter Bar */}
         <div className="mt-2.5 px-1 group-data-[collapsible=icon]:hidden">
@@ -194,7 +234,7 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {/* Dashboard */}
-                {matches("Dashboard") && (
+                {matches("Dashboard") && hasPermission("dashboard:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -213,7 +253,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Analytics */}
-                {matches("Analytics") && (
+                {matches("Analytics") && hasPermission("analytics:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -246,7 +286,7 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {/* Products */}
-                {matches("Products") && (
+                {matches("Products") && hasPermission("products:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -265,7 +305,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Product Reviews */}
-                {matches("Product Reviews") && (
+                {matches("Product Reviews") && hasPermission("products:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -284,7 +324,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Orders */}
-                {matches("Orders") && (
+                {matches("Orders") && hasPermission("orders:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -303,7 +343,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Invoices */}
-                {matches("Invoices") && (
+                {matches("Invoices") && hasPermission("invoices:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -322,7 +362,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Shipping Operations */}
-                {matches("Shipping Operations") && (
+                {matches("Shipping Operations") && hasPermission("shipping:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -341,7 +381,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Customers */}
-                {matches("Customers") && (
+                {matches("Customers") && hasPermission("customers:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -360,7 +400,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Coupons */}
-                {matches("Coupons & Discounts") && (
+                {matches("Coupons & Discounts") && hasPermission("coupons:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -722,7 +762,7 @@ export function AppSidebar() {
                 )}
 
                 {/* Users & Roles Management */}
-                {matches("Users & Roles") && (
+                {matches("Users & Roles") && hasPermission("users:read") && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -745,26 +785,28 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Sidebar Footer: Storefront Link & Admin Profile Badge */}
+      {/* Sidebar Footer: Storefront Link & Staff Profile */}
       <SidebarFooter className="p-2 border-t border-sidebar-border/60 bg-sidebar/50">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="View Live Storefront"
-              className="bg-primary/5 hover:bg-primary/10 border border-primary/20 text-primary transition-all rounded-lg"
-            >
-              <Link href="/" target="_blank" className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-semibold group-data-[collapsible=icon]:hidden">
-                   View Website
-                  </span>
-                </div>
-                <ExternalLink className="h-3.5 w-3.5 text-primary/70 group-data-[collapsible=icon]:hidden" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {!staffRole || staffRole.isSuperAdmin ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="View Live Storefront"
+                className="bg-primary/5 hover:bg-primary/10 border border-primary/20 text-primary transition-all rounded-lg"
+              >
+                <Link href="/" target="_blank" className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold group-data-[collapsible=icon]:hidden">
+                     View Website
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-primary/70 group-data-[collapsible=icon]:hidden" />
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
