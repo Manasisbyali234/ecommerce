@@ -130,6 +130,8 @@ export type Product = {
   brand?: string;
   gender?: "Men" | "Women" | "Unisex" | "Kids";
   price: number;
+  costPrice?: number;
+  discountPercent?: number;
   originalPrice?: number;
   stock: number;
   status: "active" | "draft" | "archived";

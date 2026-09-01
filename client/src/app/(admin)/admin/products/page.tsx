@@ -86,6 +86,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { formatCurrency, defaultAdditionalInfo, type Product, type AboutProductSection, type AdditionalInfoSection } from "@/lib/mock-data";
 import { api, uploadImage } from "@/lib/api";
+import { useStore, type NavCategoryGroup } from "@/lib/store";
 
 const defaultAboutSections: AboutProductSection[] = [
   {
@@ -173,7 +174,7 @@ const statusColor: Record<Product["status"], string> = {
   archived: "bg-slate-600 dark:bg-slate-500 text-white border-transparent hover:bg-slate-600/90 shadow-sm",
 };
 
-const categoryOptions = [
+const fallbackCategoryOptions = [
   "Audio",
   "Footwear",
   "Electronics",
@@ -182,7 +183,7 @@ const categoryOptions = [
   "Home & Lifestyle",
 ];
 
-const subCategoryOptions: Record<string, string[]> = {
+const fallbackSubCategoryOptions: Record<string, string[]> = {
   "Audio": ["Headphones", "Earbuds", "Speakers", "Microphones", "Accessories"],
   "Footwear": ["Sneakers", "Running Shoes", "Formal Shoes", "Sandals", "Slippers"],
   "Electronics": ["Smartphones", "Smartwatches", "Laptops", "Tablets", "Chargers & Cables"],
@@ -207,7 +208,50 @@ const presetTags = [
   "Flash Sale",
 ];
 
+function uniq(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function buildCategoryHierarchy(navCategories: NavCategoryGroup[]) {
+  const hierarchy: Record<string, string[]> = {};
+  navCategories
+    .filter((vertical) => vertical.active !== false)
+    .forEach((vertical) => {
+      vertical.categories.forEach((category) => {
+        if (!category.name?.trim()) return;
+        hierarchy[category.name] = uniq([...(hierarchy[category.name] || []), ...(category.subcategories || [])]);
+      });
+    });
+  return Object.keys(hierarchy).length > 0 ? hierarchy : fallbackSubCategoryOptions;
+}
+
+function categoryIncludes(category: string | undefined, words: string[]) {
+  const normalized = (category || "").toLowerCase();
+  return words.some((word) => normalized.includes(word));
+}
+
+function getCategoryFieldRules(category: string | undefined) {
+  const hidesVariantSpecs = categoryIncludes(category, ["electronics", "gadget", "mobile"]);
+  const comboRelevant = categoryIncludes(category, ["audio", "electronics", "gadget", "mobile", "home", "kitchen", "bag", "luggage", "accessor"]);
+  return {
+    showVariantSpecs: !hidesVariantSpecs,
+    showComboProducts: comboRelevant || !category,
+  };
+}
+
+function calculateSellingPrice(cost: number, discount: number) {
+  const safeCost = Number.isFinite(cost) ? Math.max(0, cost) : 0;
+  const safeDiscount = Number.isFinite(discount) ? Math.min(100, Math.max(0, discount)) : 0;
+  return Math.round(safeCost * (1 - safeDiscount / 100) * 100) / 100;
+}
+
+function calculateDiscountPercent(cost: number, price: number) {
+  if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(price)) return 0;
+  return Math.round(Math.min(100, Math.max(0, ((cost - price) / cost) * 100)) * 100) / 100;
+}
+
 export default function ProductsPage() {
+  const navCategories = useStore((s) => s.navCategories);
   const [items, setItems] = useState<Product[]>([]);
   useEffect(() => { api<{ items: Product[] }>("/admin/products").then(({ items: saved }) => setItems(saved)).catch(() => undefined); }, []);
   const [q, setQ] = useState("");
@@ -290,14 +334,22 @@ export default function ProductsPage() {
   const [comboSubCategoryFilter, setComboSubCategoryFilter] = useState<string>("all");
   const [selectedComboProductId, setSelectedComboProductId] = useState<string>("");
 
+  const categoryHierarchy = useMemo(() => buildCategoryHierarchy(navCategories), [navCategories]);
+  const categoryOptions = useMemo(() => {
+    const options = uniq(Object.keys(categoryHierarchy));
+    return options.length > 0 ? options : fallbackCategoryOptions;
+  }, [categoryHierarchy]);
+  const defaultCategory = categoryOptions[0] || fallbackCategoryOptions[0];
+  const selectedCategorySubCategories = categoryHierarchy[formData.category || defaultCategory] || [];
+  const fieldRules = useMemo(() => getCategoryFieldRules(formData.category), [formData.category]);
+
   // Sub-categories for Combo category filter
   const comboSubCategoryOptionsList = useMemo(() => {
     if (comboCategoryFilter === "all") {
-      const all = Object.values(subCategoryOptions).flat();
-      return Array.from(new Set(all));
+      return uniq(Object.values(categoryHierarchy).flat());
     }
-    return subCategoryOptions[comboCategoryFilter] || [];
-  }, [comboCategoryFilter]);
+    return categoryHierarchy[comboCategoryFilter] || [];
+  }, [comboCategoryFilter, categoryHierarchy]);
 
   // Catalog items filtered by Combo Category & Sub-Category
   const availableComboProducts = useMemo(() => {
@@ -308,6 +360,12 @@ export default function ProductsPage() {
       return matchCat && matchSubCat;
     });
   }, [items, formData.id, editingId, comboCategoryFilter, comboSubCategoryFilter]);
+
+  useEffect(() => {
+    if ((activeTab === "variants" && !fieldRules.showVariantSpecs) || (activeTab === "combo" && !fieldRules.showComboProducts)) {
+      setActiveTab("basic");
+    }
+  }, [activeTab, fieldRules.showComboProducts, fieldRules.showVariantSpecs]);
 
   // Aspect ratio preview state for images
   const [aspectRatioPreview, setAspectRatioPreview] = useState<"1:1" | "4:3" | "16:9">("1:1");
@@ -320,6 +378,8 @@ export default function ProductsPage() {
     setSelectedComboDealIdx(0);
     setFormData({
       ...product,
+      costPrice: product.costPrice ?? product.originalPrice ?? product.price,
+      discountPercent: product.discountPercent ?? calculateDiscountPercent(product.originalPrice || product.price, product.price),
       comboDealAvailable: product.comboDealAvailable ?? true,
       comboDeals:
         product.comboDeals && product.comboDeals.length > 0
@@ -362,11 +422,10 @@ export default function ProductsPage() {
   // Current sub-categories available based on selected category filter
   const currentSubCategories = useMemo(() => {
     if (categoryFilter === "all") {
-      const all = Object.values(subCategoryOptions).flat();
-      return Array.from(new Set(all));
+      return uniq(Object.values(categoryHierarchy).flat());
     }
-    return subCategoryOptions[categoryFilter] || [];
-  }, [categoryFilter]);
+    return categoryHierarchy[categoryFilter] || [];
+  }, [categoryFilter, categoryHierarchy]);
 
   // Filtered Products list
   const filteredProducts = useMemo(() => {
@@ -390,14 +449,19 @@ export default function ProductsPage() {
     setEditingId(null);
     setActiveTab("basic");
     setCustomParamKeys({});
+    const newDefaultCategory = defaultCategory;
+    const newDefaultSubCategory = categoryHierarchy[newDefaultCategory]?.[0] || "";
     setFormData({
       name: "",
       sku: `SKU-${Math.floor(100000 + Math.random() * 900000)}`,
-      category: "Audio",
+      category: newDefaultCategory,
+      subCategory: newDefaultSubCategory,
       brand: "Metromindz",
       gender: "Unisex",
-      price: 1999,
-      originalPrice: 2999,
+      costPrice: 2500,
+      discountPercent: 20,
+      price: 2000,
+      originalPrice: 2500,
       stock: 25,
       status: "active",
       badge: "New Arrival",
@@ -435,10 +499,10 @@ export default function ProductsPage() {
         sku: "AUR-WH-001",
         name: "Aurora Wireless Headphones",
         brand: "Metromindz",
-        category: "Audio",
+        category: newDefaultCategory,
         gender: "Unisex",
       }),
-      comboDealAvailable: true,
+      comboDealAvailable: getCategoryFieldRules(newDefaultCategory).showComboProducts,
       comboDeals: [
         { id: "cd-1", title: "Combo Deal #1", productIds: [] },
       ],
@@ -462,7 +526,8 @@ export default function ProductsPage() {
       .filter(Boolean);
 
     const slug = (formData.name || "product").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const payload = { name: formData.name, slug, sku: formData.sku, category: formData.category || "Audio", brand: formData.brand, gender: formData.gender, price: Number(formData.price) || 0, originalPrice: Number(formData.originalPrice) || 0, stock: Number(formData.stock) || 0, status: formData.status || "active", image: formData.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600", images: formData.images || [], description: formData.description, features: parsedFeatures, specs: formData.specs || {}, colors: formData.colors || [], sizes: formData.sizes || [], tags: formData.tags || [], codAvailable: formData.codAvailable ?? true, returnAvailable: formData.returnAvailable ?? true, exchangeAvailable: formData.exchangeAvailable ?? true, warrantyPeriod: formData.warrantyPeriod };
+    const comboDeals = fieldRules.showComboProducts ? (formData.comboDeals || []) : [];
+    const payload = { name: formData.name, slug, sku: formData.sku, category: formData.category || defaultCategory, subCategory: formData.subCategory || undefined, brand: formData.brand, gender: formData.gender, costPrice: Number(formData.costPrice) || 0, discountPercent: Number(formData.discountPercent) || 0, price: Number(formData.price) || 0, originalPrice: Number(formData.originalPrice) || 0, stock: Number(formData.stock) || 0, status: formData.status || "active", image: formData.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600", images: formData.images || [], description: formData.description, features: parsedFeatures, specs: formData.specs || {}, colors: formData.colors || [], sizes: formData.sizes || [], tags: formData.tags || [], codAvailable: formData.codAvailable ?? true, returnAvailable: formData.returnAvailable ?? true, exchangeAvailable: formData.exchangeAvailable ?? true, warrantyPeriod: formData.warrantyPeriod, comboDealAvailable: fieldRules.showComboProducts ? (formData.comboDealAvailable ?? true) : false, comboDeals, comboProductIds: uniq(comboDeals.flatMap((deal) => deal.productIds || [])) };
     try { if (editingId) {
       // Update existing
       await api(`/admin/products/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -473,6 +538,8 @@ export default function ProductsPage() {
                 ...p,
                 ...formData,
                 features: parsedFeatures,
+                costPrice: Number(formData.costPrice) || 0,
+                discountPercent: Number(formData.discountPercent) || 0,
                 price: Number(formData.price) || 0,
                 originalPrice: Number(formData.originalPrice) || 0,
                 stock: Number(formData.stock) || 0,
@@ -491,9 +558,12 @@ export default function ProductsPage() {
         id: `P-${maxId + 1}`,
         name: formData.name || "New Product",
         sku: formData.sku || `SKU-${Date.now()}`,
-        category: formData.category || "Audio",
+        category: formData.category || defaultCategory,
+        subCategory: formData.subCategory || undefined,
         brand: formData.brand || "Metromindz",
         gender: formData.gender || "Unisex",
+        costPrice: Number(formData.costPrice) || 0,
+        discountPercent: Number(formData.discountPercent) || 0,
         price: Number(formData.price) || 0,
         originalPrice: Number(formData.originalPrice) || 0,
         stock: Number(formData.stock) || 0,
@@ -526,6 +596,9 @@ export default function ProductsPage() {
         additionalInfoSections: formData.additionalInfoSections && formData.additionalInfoSections.length > 0
           ? formData.additionalInfoSections
           : defaultAdditionalInfo(formData),
+        comboDealAvailable: payload.comboDealAvailable,
+        comboDeals,
+        comboProductIds: payload.comboProductIds,
       };
       const { product: saved } = await api<{ product: Product }>("/admin/products", { method: "POST", body: JSON.stringify(payload) });
       newProduct.id = saved.id;
@@ -677,6 +750,31 @@ export default function ProductsPage() {
     formData.price && formData.originalPrice && formData.originalPrice > formData.price
       ? Math.round(((formData.originalPrice - formData.price) / formData.originalPrice) * 100)
       : 0;
+
+  const handleCostPriceChange = (value: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      costPrice: value,
+      price: calculateSellingPrice(value, Number(prev.discountPercent) || 0),
+    }));
+  };
+
+  const handlePricingDiscountChange = (value: number) => {
+    const discount = Math.min(100, Math.max(0, Number(value) || 0));
+    setFormData((prev) => ({
+      ...prev,
+      discountPercent: discount,
+      price: calculateSellingPrice(Number(prev.costPrice) || 0, discount),
+    }));
+  };
+
+  const handleSellingPriceChange = (value: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      price: value,
+      discountPercent: calculateDiscountPercent(Number(prev.costPrice) || 0, value),
+    }));
+  };
 
   // =========================================================================
   // ADDITIONAL INFORMATION SECTIONS HELPERS
@@ -1349,13 +1447,15 @@ export default function ProductsPage() {
                   <ImageIcon className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
                   <span className="whitespace-nowrap">Media & Gallery</span>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="variants"
-                  className="text-xs font-bold py-2.5 px-3.5 gap-2 rounded-xl transition-all shrink-0 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
-                >
-                  <Sliders className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                  <span className="whitespace-nowrap">Variants & Specs</span>
-                </TabsTrigger>
+                {fieldRules.showVariantSpecs && (
+                  <TabsTrigger
+                    value="variants"
+                    className="text-xs font-bold py-2.5 px-3.5 gap-2 rounded-xl transition-all shrink-0 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+                  >
+                    <Sliders className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                    <span className="whitespace-nowrap">Variants & Specs</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger
                   value="sections"
                   className="text-xs font-bold py-2.5 px-3.5 gap-2 rounded-xl transition-all shrink-0 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
@@ -1370,13 +1470,15 @@ export default function ProductsPage() {
                   <ShieldCheck className="h-3.5 w-3.5 text-teal-500 shrink-0" />
                   <span className="whitespace-nowrap">Additional Info</span>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="combo"
-                  className="text-xs font-bold py-2.5 px-3.5 gap-2 rounded-xl transition-all shrink-0 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  <span className="whitespace-nowrap">Combo Products</span>
-                </TabsTrigger>
+                {fieldRules.showComboProducts && (
+                  <TabsTrigger
+                    value="combo"
+                    className="text-xs font-bold py-2.5 px-3.5 gap-2 rounded-xl transition-all shrink-0 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="whitespace-nowrap">Combo Products</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* TAB 1: BASIC INFORMATION */}
@@ -1408,11 +1510,12 @@ export default function ProductsPage() {
                   <div className="space-y-1">
                     <Label className="text-xs font-bold text-foreground">Category *</Label>
                     <Select
-                      value={formData.category || "Audio"}
+                      value={formData.category || defaultCategory}
                       onValueChange={(val) => setFormData({
                         ...formData,
                         category: val,
-                        subCategory: subCategoryOptions[val]?.[0] || ""
+                        subCategory: categoryHierarchy[val]?.[0] || "",
+                        comboDealAvailable: getCategoryFieldRules(val).showComboProducts,
                       })}
                     >
                       <SelectTrigger className="text-xs font-semibold">
@@ -1433,13 +1536,14 @@ export default function ProductsPage() {
                     <Label className="text-xs font-bold text-foreground">Sub-Category</Label>
                     <Select
                       value={formData.subCategory || ""}
+                      disabled={selectedCategorySubCategories.length === 0}
                       onValueChange={(val) => setFormData({ ...formData, subCategory: val })}
                     >
                       <SelectTrigger className="text-xs font-semibold">
                         <SelectValue placeholder="Select Sub-Category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(subCategoryOptions[formData.category || "Audio"] || []).map((sc) => (
+                        {selectedCategorySubCategories.map((sc) => (
                           <SelectItem key={sc} value={sc}>
                             {sc}
                           </SelectItem>
@@ -1484,7 +1588,7 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-extrabold text-foreground flex items-center gap-2">
                         <Sliders className="h-4 w-4 text-amber-500" />
-                        Category Filter Parameters ({formData.category || "Audio"})
+                        Category Filter Parameters ({formData.category || defaultCategory})
                       </Label>
                       <Badge variant="outline" className="text-[10px] font-bold bg-background">
                         Auto-linked to Storefront Top Filters
@@ -1783,6 +1887,40 @@ export default function ProductsPage() {
               {/* TAB 2: PRICING & INVENTORY */}
               <TabsContent value="pricing" className="space-y-4 pt-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Current Cost */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-foreground">Current Cost</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">INR</span>
+                      <Input
+                        type="number"
+                        placeholder="2500"
+                        value={formData.costPrice ?? ""}
+                        onChange={(e) => handleCostPriceChange(Number(e.target.value))}
+                        className="pl-11 text-xs font-bold"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Base amount used for auto-calculating Selling Price.</p>
+                  </div>
+
+                  {/* Discount Percent */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-foreground">Discount %</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="20"
+                        value={formData.discountPercent ?? ""}
+                        onChange={(e) => handlePricingDiscountChange(Number(e.target.value))}
+                        className="pr-8 text-xs font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">%</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Changing this updates Selling Price automatically.</p>
+                  </div>
+
                   {/* Selling Price */}
                   <div className="space-y-1">
                     <Label className="text-xs font-bold text-foreground">Selling Price (₹) *</Label>
@@ -1792,11 +1930,11 @@ export default function ProductsPage() {
                         type="number"
                         placeholder="1999"
                         value={formData.price ?? ""}
-                        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                        onChange={(e) => handleSellingPriceChange(Number(e.target.value))}
                         className="pl-7 text-xs font-bold"
                       />
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Final price billed to customer at checkout.</p>
+                    <p className="text-[10px] text-muted-foreground">Auto-calculated from Current Cost and Discount %, with manual override.</p>
                   </div>
 
                   {/* Compare At Price (MRP) */}
@@ -2157,6 +2295,7 @@ export default function ProductsPage() {
               </TabsContent>
 
               {/* TAB 5: VARIANTS & SPECS */}
+              {fieldRules.showVariantSpecs && (
               <TabsContent value="variants" className="space-y-5 pt-1">
                 {/* Color Swatches */}
                 <div className="space-y-3 p-4 rounded-xl border bg-muted/20">
@@ -2253,6 +2392,7 @@ export default function ProductsPage() {
                   </div>
                 </div>
               </TabsContent>
+              )}
 
               {/* ========================================================================= */}
               {/* TAB 6: FULLY ENHANCED DETAIL PAGE ABOUT SECTIONS EDITOR */}
@@ -3129,6 +3269,7 @@ export default function ProductsPage() {
               </TabsContent>
 
               {/* TAB 8: COMBO PRODUCTS (FREQUENTLY BOUGHT TOGETHER) */}
+              {fieldRules.showComboProducts && (
               <TabsContent value="combo" className="space-y-4 pt-1">
                 <div className="p-4 rounded-xl border bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20 space-y-4">
                   {/* Top Bar: Title + Toggle Switch */}
@@ -3467,6 +3608,7 @@ export default function ProductsPage() {
                   )}
                 </div>
               </TabsContent>
+              )}
             </Tabs>
           </div>
 

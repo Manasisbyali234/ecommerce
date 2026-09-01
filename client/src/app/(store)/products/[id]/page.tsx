@@ -87,6 +87,16 @@ const loadingProduct: Product = {
   sizes: [],
 };
 
+function orderItemProductId(item: Record<string, unknown>) {
+  const product = item.product;
+  if (typeof product === "string") return product;
+  if (product && typeof product === "object") {
+    const record = product as Record<string, unknown>;
+    return String(record.id || record._id || "");
+  }
+  return String(item.id || "");
+}
+
 export default function ProductDetailPage({ params }: PageProps) {
   const products = useProducts();
   const resolvedParams = use(params);
@@ -185,6 +195,31 @@ export default function ProductDetailPage({ params }: PageProps) {
   }, [resolvedParams.id]);
   const [reviewMediaModal, setReviewMediaModal] = useState<{ type: "image" | "video"; url: string; title?: string } | null>(null);
   const [openAddReviewModal, setOpenAddReviewModal] = useState(false);
+  const [canReviewProduct, setCanReviewProduct] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCanReviewProduct(false);
+    if (!getAccessToken() || product.id === "loading") return;
+
+    api<{ items: Array<{ status?: string; items?: Array<Record<string, unknown>> }> }>("/orders")
+      .then(({ items }) => {
+        if (cancelled) return;
+        setCanReviewProduct(
+          items.some((order) =>
+            order.status === "delivered" &&
+            (order.items || []).some((item) => orderItemProductId(item) === product.id)
+          )
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setCanReviewProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
   // Review Filter & Sort States
   const [reviewRatingFilter, setReviewRatingFilter] = useState<number | "all">("all");
@@ -254,6 +289,10 @@ export default function ProductDetailPage({ params }: PageProps) {
 
   const handleAddReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canReviewProduct) {
+      toast.error("You can review this product after your delivered order is completed.");
+      return;
+    }
     if (!newReview.author.trim() || !newReview.comment.trim()) {
       toast.error("Please fill in your name and review details");
       return;
@@ -1212,10 +1251,20 @@ export default function ProductDetailPage({ params }: PageProps) {
                   <p className="text-xs text-muted-foreground">Share your experience with the community.</p>
                 </div>
                 <Button
-                  onClick={() => setOpenAddReviewModal(true)}
+                  onClick={() => {
+                    if (!getAccessToken()) {
+                      toast.error("Please sign in to review products you have purchased.");
+                      return;
+                    }
+                    if (!canReviewProduct) {
+                      toast.error("You can review this product after your delivered order is completed.");
+                      return;
+                    }
+                    setOpenAddReviewModal(true);
+                  }}
                   className="w-full text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-xs"
                 >
-                  Write a Customer Review
+                  {canReviewProduct ? "Write a Customer Review" : "Review after delivery"}
                 </Button>
               </div>
             </div>
