@@ -127,6 +127,7 @@ function OrdersContent() {
         const mQ =
           !q ||
           o.id.toLowerCase().includes(q.toLowerCase()) ||
+          (o.orderNumber && o.orderNumber.toLowerCase().includes(q.toLowerCase())) ||
           o.customer.toLowerCase().includes(q.toLowerCase());
         const mS = status === "all" || o.status === status;
         return mQ && mS;
@@ -342,7 +343,12 @@ function OrdersContent() {
               <TableBody>
                 {filtered.map((o) => (
                   <TableRow key={o.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setSelectedId(o.id)}>
-                    <TableCell className="font-mono text-xs font-bold text-foreground">{o.id}</TableCell>
+                    <TableCell className="font-mono text-xs font-bold text-foreground">
+                      <div className="flex flex-col">
+                        <span>{o.orderNumber || o.id}</span>
+                        {o.orderNumber && <span className="text-[10px] text-muted-foreground font-normal">{o.id.slice(0, 8)}…</span>}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-bold text-xs text-foreground">{o.customer}</span>
@@ -488,10 +494,10 @@ function OrdersContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <DialogTitle className="text-xl font-extrabold flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5 text-amber-500" /> Order Details: {selected.id}
+                      <ShoppingBag className="h-5 w-5 text-amber-500" /> Order Details: {selected.orderNumber || selected.id}
                     </DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                      Customer: <span className="font-bold text-foreground">{selected.customer}</span> ({selected.email})
+                      Customer: <span className="font-bold text-foreground">{selected.customer}</span>{selected.email ? ` (${selected.email})` : ""}
                     </DialogDescription>
                   </div>
 
@@ -507,13 +513,45 @@ function OrdersContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground">Order Date</span><span className="font-mono font-bold text-foreground">{selected.date}</span></div>
                   <div className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground">Total Item Quantity</span><span className="font-bold text-foreground">{getItemCount(selected.items)} items</span></div>
+                  <div className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground">Payment Method</span><span className="font-bold text-foreground capitalize">{selected.paymentMethod || "—"}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Total Order Value</span><span className="font-extrabold text-amber-600 dark:text-amber-400 text-sm">{formatCurrency(selected.total)}</span></div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between border-b pb-1.5 items-center"><span className="text-muted-foreground">Payment Status</span><Badge variant="outline" className={`text-[10px] font-bold ${paymentColor[selected.paymentStatus]}`}>{selected.paymentStatus}</Badge></div>
+                  <div className="flex justify-between border-b pb-1.5 items-center">
+                    <span className="text-muted-foreground">Payment Status</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`text-[10px] font-bold ${paymentColor[selected.paymentStatus]}`}>{selected.paymentStatus}</Badge>
+                      {selected.paymentStatus === "unpaid" && (
+                        <button
+                          onClick={() => { store.updateOrder(selected.id, { paymentStatus: "paid" }); toast.success("Marked as paid"); }}
+                          className="text-[10px] font-bold text-emerald-600 border border-emerald-500/40 rounded px-1.5 py-0.5 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          Mark Paid
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex justify-between border-b pb-1.5 items-center"><span className="text-muted-foreground">Fulfillment Status</span><Badge variant="outline" className={`text-[10px] font-bold ${statusColor[selected.status]}`}>{selected.status}</Badge></div>
-                  <div className="flex justify-between items-center"><span className="text-muted-foreground">Shipping Courier</span><span className="font-mono font-bold text-blue-600">Delhivery Express</span></div>
+                  {selected.paymentProvider === "razorpay" && (
+                    <>
+                      {selected.razorpayOrderId && selected.razorpayOrderId !== "" && (
+                        <div className="flex justify-between border-b pb-1.5 items-center gap-2">
+                          <span className="text-muted-foreground shrink-0">Razorpay Order ID</span>
+                          <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400 truncate max-w-[160px]" title={selected.razorpayOrderId}>{selected.razorpayOrderId}</span>
+                        </div>
+                      )}
+                      {selected.razorpayPaymentId && selected.razorpayPaymentId !== "" && (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-muted-foreground shrink-0">Razorpay Payment ID</span>
+                          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 truncate max-w-[160px]" title={selected.razorpayPaymentId}>{selected.razorpayPaymentId}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {(!selected.paymentProvider || selected.paymentProvider !== "razorpay") && (
+                    <div className="flex justify-between items-center"><span className="text-muted-foreground">Shipping Courier</span><span className="font-mono font-bold text-blue-600">Delhivery Express</span></div>
+                  )}
                 </div>
               </div>
 

@@ -130,7 +130,19 @@ const providerIcons: Record<string, typeof CreditCard> = {
 export default function PaymentsPage() {
   const [gateways, setGateways] = useState<ExtendedGateway[]>([]);
 
-  useEffect(() => { api<{ items: Array<Record<string, unknown>> }>("/admin/payment-gateways").then(({ items }) => setGateways(items.map((gateway) => ({ id: String(gateway.id), name: String(gateway.name), provider: String(gateway.provider), enabled: Boolean(gateway.enabled), mode: gateway.mode === "live" ? "live" : "test", fees: String(gateway.fees || ""), transactions30d: 0, volume30d: 0, ...(gateway.config as Record<string, string> || {}) })))).catch(() => toast.error("Unable to load payment gateways")); }, []);
+  useEffect(() => { api<{ items: Array<Record<string, unknown>> }>("/admin/payment-gateways").then(({ items }) => {
+    if (items.length === 0) {
+      // Seed Razorpay gateway on first load
+      api("/admin/payment-gateways", { method: "POST", body: JSON.stringify({ name: "Razorpay (UPI, NetBanking, Cards)", provider: "razorpay", enabled: true, mode: "test", fees: "2% + GST", config: { keyId: "rzp_test_TV6GNOB1KDRq3s", keySecret: "Dj9lhvthfFY2fGCfAmIFgjWK", publishableKey: "rzp_test_TV6GNOB1KDRq3s" } }) }).then(() => api<{ items: Array<Record<string, unknown>> }>("/admin/payment-gateways")).then(({ items: seeded }) => setGateways(seeded.map(mapGateway))).catch(() => {});
+      return;
+    }
+    setGateways(items.map(mapGateway));
+  }).catch(() => toast.error("Unable to load payment gateways")); }, []);
+
+  function mapGateway(gateway: Record<string, unknown>): ExtendedGateway {
+    const cfg = (gateway.config as Record<string, string>) || {};
+    return { id: String(gateway.id), name: String(gateway.name), provider: String(gateway.provider), enabled: Boolean(gateway.enabled), mode: gateway.mode === "live" ? "live" : "test", fees: String(gateway.fees || ""), transactions30d: 0, volume30d: 0, publishableKey: cfg.publishableKey || cfg.keyId || "", secretKey: cfg.keySecret || "", webhookSecret: cfg.webhookSecret || "", merchantId: cfg.merchantId || "" };
+  }
 
   // Selected Gateway Modal state
   const [selectedGateway, setSelectedGateway] = useState<ExtendedGateway | null>(null);
@@ -193,7 +205,7 @@ export default function PaymentsPage() {
   const handleSaveKeys = async () => {
     if (!selectedGateway) return;
 
-    try { await api(`/admin/payment-gateways/${selectedGateway.id}`, { method: "PATCH", body: JSON.stringify({ mode: keysForm.mode, config: keysForm }) }); setGateways((prev) =>
+    try { await api(`/admin/payment-gateways/${selectedGateway.id}`, { method: "PATCH", body: JSON.stringify({ mode: keysForm.mode, config: { publishableKey: keysForm.publishableKey, keyId: keysForm.publishableKey, keySecret: keysForm.secretKey, webhookSecret: keysForm.webhookSecret, merchantId: keysForm.merchantId } }) }); setGateways((prev) =>
       prev.map((g) =>
         g.id === selectedGateway.id
           ? {

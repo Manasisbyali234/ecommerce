@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   MapPin,
   Plus,
-  Star,
   Trash2,
   Minus,
   Check,
@@ -22,6 +21,9 @@ import {
   Truck,
   Headphones,
   Wallet,
+  CreditCard,
+  Banknote,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
@@ -76,8 +78,9 @@ export default function StorefrontCheckoutPage() {
     }
   }, []);
 
-  // Wizard Step State (1: Cart Details, 2: Shipping Address)
-  const [step, setStep] = useState<1 | 2>(1);
+  // Wizard Step State (1: Cart Details, 2: Shipping Address, 3: Payment)
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("online");
 
   // Address Selection State
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -215,38 +218,66 @@ export default function StorefrontCheckoutPage() {
     return () => window.clearTimeout(timeout);
   }, [customAddress.street, isAddingCustomAddress]);
 
-  const handlePlaceOrder = async () => {
-    if (items.length === 0) {
-      toast.error("Your shopping cart is empty");
-      return;
-    }
-
+  const resolveAddress = async (): Promise<CustomerAddress | Omit<CustomerAddress, "id"> | null> => {
     if (isAddingCustomAddress) {
-      if (!customAddress.name.trim() || !customAddress.phone.trim() || !customAddress.street.trim() || !customAddress.city.trim() || !customAddress.state.trim() || !/^\d{6}$/.test(customAddress.pincode)) {
-        toast.error("Please complete all required fields for the new address");
-        return;
-      }
+      const normalizedPhone = customAddress.phone.replace(/\D/g, "").slice(-10);
+      const address = { fullName: customAddress.name, phone: normalizedPhone, street: customAddress.street, city: customAddress.city, state: customAddress.state, pincode: customAddress.pincode, type: "Home" as const, isDefault: savedAddresses.length === 0 };
+      const saved = await api<{ addresses: CustomerAddress[] }>("/me/addresses", { method: "POST", body: JSON.stringify(address) });
+      return saved.addresses.find((item) => item.isDefault) || saved.addresses[saved.addresses.length - 1] || address;
     }
+    return savedAddresses.find((item) => item.id === selectedAddressId) || savedAddresses.find((item) => item.isDefault) || null;
+  };
 
+  const handlePlaceOrder = async () => {
+    if (items.length === 0) { toast.error("Your shopping cart is empty"); return; }
     if (!getAccessToken()) { toast.error("Please sign in before placing an order"); return; }
+
     try {
-      let address: CustomerAddress | Omit<CustomerAddress, "id">;
-      if (isAddingCustomAddress) {
-        const normalizedPhone = customAddress.phone.replace(/\D/g, "").slice(-10);
-        address = { fullName: customAddress.name, phone: normalizedPhone, street: customAddress.street, city: customAddress.city, state: customAddress.state, pincode: customAddress.pincode, type: "Home", isDefault: savedAddresses.length === 0 };
-        const saved = await api<{ addresses: CustomerAddress[] }>("/me/addresses", { method: "POST", body: JSON.stringify(address) });
-        address = saved.addresses.find((item) => item.isDefault) || saved.addresses[saved.addresses.length - 1] || address;
+      const address = await resolveAddress();
+      if (!address) { toast.error("Please choose or add a delivery address"); return; }
+
+      const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string; paymentStatus: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod, items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })) }) });
+
+      if (paymentMethod === "online") {
+        const { payment } = await api<{ payment: { keyId: string; orderId: string; amount: number; currency: string } }>(`/orders/${order.id}/payment`, { method: "POST" });
+        await openRazorpay(payment, order);
       } else {
-        const selected = savedAddresses.find((item) => item.id === selectedAddressId) || savedAddresses.find((item) => item.isDefault);
-        if (!selected) { toast.error("Please choose or add a delivery address"); return; }
-        address = selected;
+        clearCart();
+        await hydrateCustomerStore();
+        toast.success(`Order ${order.orderNumber} placed!`, { description: "Cash on delivery confirmed." });
+        router.push(`/order-success?orderId=${encodeURIComponent(order.orderNumber || order.id)}`);
       }
-      const { order } = await api<{ order: { id: string; orderNumber: string; paymentMethod: string } }>("/orders/checkout", { method: "POST", body: JSON.stringify({ address, couponCode: appliedCoupon?.code, paymentMethod: "cod", items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })) }) });
-      clearCart();
-      await hydrateCustomerStore();
-      toast.success(`Order ${order.orderNumber} placed successfully!`, { description: "Order synced live to Admin Dashboard" });
-      router.push(`/order-success?orderId=${encodeURIComponent(order.orderNumber || order.id)}`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to place order"); }
+  };
+
+  const openRazorpay = (payment: { keyId: string; orderId: string; amount: number; currency: string }, order: { id: string; orderNumber: string }) => {
+    return new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rzp = new (window as any).Razorpay({
+          key: payment.keyId,
+          amount: payment.amount,
+          currency: payment.currency,
+          order_id: payment.orderId,
+          name: "Metromindz",
+          description: `Order ${order.orderNumber}`,
+          handler: async () => {
+            clearCart();
+            await hydrateCustomerStore();
+            toast.success(`Payment successful! Order ${order.orderNumber} confirmed.`);
+            router.push(`/order-success?orderId=${encodeURIComponent(order.orderNumber || order.id)}`);
+            resolve();
+          },
+          modal: { ondismiss: () => { toast.error("Payment cancelled"); reject(new Error("Payment cancelled")); } },
+          theme: { color: "#f59e0b" },
+        });
+        rzp.open();
+      };
+      script.onerror = () => reject(new Error("Failed to load Razorpay"));
+      document.body.appendChild(script);
+    });
   };
 
   const availableCoupons = coupons.filter((c) => evaluateCoupon(c, cartLines, subtotal, SHIPPING_COST).ok);
@@ -283,23 +314,21 @@ export default function StorefrontCheckoutPage() {
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
 
           <button
-            onClick={() => {
-              if (items.length === 0) {
-                toast.error("Add products to shopping cart first");
-                return;
-              }
-              setStep(2);
-            }}
-            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 ${
-              step === 2
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            onClick={() => { if (items.length === 0) { toast.error("Add products to shopping cart first"); return; } setStep(2); }}
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 ${ step === 2 ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground" }`}
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20 text-[11px]">
-              2
-            </span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20 text-[11px]">2</span>
             <span>Shipping Address</span>
+          </button>
+
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+
+          <button
+            onClick={() => { if (items.length === 0) { toast.error("Add products to shopping cart first"); return; } setStep(3); }}
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 ${ step === 3 ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground" }`}
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20 text-[11px]">3</span>
+            <span>Payment</span>
           </button>
         </div>
       </div>
@@ -468,6 +497,60 @@ export default function StorefrontCheckoutPage() {
                 )}
               </CardContent>
             </Card>
+          ) : step === 3 ? (
+            /* STEP 3: Payment Method */
+            <Card className="border shadow-sm">
+              <CardHeader className="flex flex-col gap-2 border-b pb-4">
+                <CardTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
+                  <CreditCard className="h-5 w-5 text-primary" /> Step 3: Choose Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid gap-3">
+                  <div
+                    onClick={() => setPaymentMethod("online")}
+                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${ paymentMethod === "online" ? "border-primary bg-primary/5 shadow-sm" : "border-muted hover:border-primary/50" }`}
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <Zap className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-foreground">Pay Online via Razorpay</p>
+                      <p className="text-xs text-muted-foreground">UPI, Cards, NetBanking, Wallets — Secure & Instant</p>
+                    </div>
+                    <div className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${ paymentMethod === "online" ? "border-primary bg-primary text-primary-foreground" : "border-muted" }`}>
+                      {paymentMethod === "online" && <Check className="h-3 w-3" />}
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod("cod")}
+                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${ paymentMethod === "cod" ? "border-primary bg-primary/5 shadow-sm" : "border-muted hover:border-primary/50" }`}
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <Banknote className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-foreground">Cash on Delivery</p>
+                      <p className="text-xs text-muted-foreground">Pay when your order arrives at your door</p>
+                    </div>
+                    <div className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${ paymentMethod === "cod" ? "border-primary bg-primary text-primary-foreground" : "border-muted" }`}>
+                      {paymentMethod === "cod" && <Check className="h-3 w-3" />}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <Button variant="outline" onClick={() => setStep(2)} className="w-full sm:w-auto">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                  </Button>
+                  <Button size="lg" className="h-11 w-full px-4 font-semibold shadow-md sm:h-12 sm:w-auto sm:px-8" onClick={handlePlaceOrder}>
+                    {paymentMethod === "online" ? `Pay ${formatCurrency(total)} via Razorpay` : `Place Order (COD) — ${formatCurrency(total)}`}
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             /* STEP 2: Shipping Address Selection Options */
             <Card className="border shadow-sm">
@@ -631,20 +714,16 @@ export default function StorefrontCheckoutPage() {
 
                 {/* Step 2 Action Buttons */}
                 <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="w-full sm:w-auto"
-                  >
+                  <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Cart
                   </Button>
-
-                  <Button
-                    size="lg"
-                    className="h-11 w-full px-4 font-semibold shadow-md sm:h-12 sm:w-auto sm:px-8"
-                    onClick={handlePlaceOrder}
-                  >
-                    Complete Order ({formatCurrency(total)}) <CheckCircle2 className="ml-2 h-4 w-4" />
+                  <Button size="lg" className="h-11 w-full px-4 font-semibold shadow-md sm:h-12 sm:w-auto sm:px-8" onClick={() => {
+                    if (isAddingCustomAddress && (!customAddress.name.trim() || !customAddress.phone.trim() || !customAddress.street.trim() || !customAddress.city.trim() || !customAddress.state.trim() || !/^\d{6}$/.test(customAddress.pincode))) {
+                      toast.error("Please complete all required address fields"); return;
+                    }
+                    setStep(3);
+                  }}>
+                    Continue to Payment <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

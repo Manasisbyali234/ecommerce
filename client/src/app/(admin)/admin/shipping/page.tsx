@@ -109,6 +109,7 @@ export default function ShippingPage() {
   const [newCarrier, setNewCarrier] = useState("Delhivery");
   const [newTracking, setNewTracking] = useState("");
   const [newDestination, setNewDestination] = useState("");
+  const [allOrders, setAllOrders] = useState<Array<Record<string, unknown>>>([]);
 
   // ── Additional Charges State ──────────────────────────────────────────────
   const [handlingEnabled, setHandlingEnabled] = useState(true);
@@ -127,8 +128,8 @@ export default function ShippingPage() {
   const [expressNote, setExpressNote] = useState("Next-day delivery before 12 PM for orders placed before the cutoff time.");
 
   useEffect(() => {
-    api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then(({ items }) => setShipmentsList(items.filter((order) => order.shipment).map((order) => { const shipment = order.shipment as Record<string, unknown>; const customer = order.customer as Record<string, string>; return { id: String(order.id), orderId: String(order.orderNumber || order.id), customer: customer?.fullName || "Customer", carrier: String(shipment.carrier || ""), tracking: String(shipment.tracking || ""), status: shipment.status as Shipment["status"], destination: String((order.shippingAddress as Record<string, string>)?.city || ""), eta: String(shipment.eta || "").slice(0, 10) }; }))).catch(() => toast.error("Unable to load shipment records"));
-    api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/shipping").then(({ setting }) => { const v = setting.value; setHandlingEnabled(v.handlingEnabled !== false); setHandlingType(v.handlingType === "percent" ? "percent" : "flat"); setHandlingAmount(String(v.handlingAmount || handlingAmount)); setMarketplaceEnabled(v.marketplaceEnabled !== false); setMarketplaceFeeType(v.marketplaceFeeType === "flat" ? "flat" : "percent"); setMarketplaceFeeAmount(String(v.marketplaceFeeAmount || marketplaceFeeAmount)); setExpressEnabled(v.expressEnabled !== false); setExpressAmount(String(v.expressAmount || expressAmount)); setExpressCutoff(String(v.expressCutoff || expressCutoff)); }).catch(() => undefined);
+    api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then(({ items }) => { setAllOrders(items); setShipmentsList(items.filter((order) => order.shipment).map((order) => { const shipment = order.shipment as Record<string, unknown>; const customer = order.customer as Record<string, string>; return { id: String(order.id), orderId: String(order.orderNumber || order.id), customer: customer?.fullName || "Customer", carrier: String(shipment.carrier || ""), tracking: String(shipment.tracking || ""), status: shipment.status as Shipment["status"], destination: String((order.shippingAddress as Record<string, string>)?.city || ""), eta: String(shipment.eta || "").slice(0, 10) }; })); }).catch(() => toast.error("Unable to load shipment records"));
+    api<{ setting: { value: Record<string, unknown> } }>("/admin/settings/shipping").then(({ setting }) => { const v = setting.value; setHandlingEnabled(v.handlingEnabled !== false); setHandlingType(v.handlingType === "percent" ? "percent" : "flat"); setHandlingAmount(String(v.handlingAmount || handlingAmount)); if (v.handlingNote) setHandlingNote(String(v.handlingNote)); setMarketplaceEnabled(v.marketplaceEnabled !== false); setMarketplaceFeeType(v.marketplaceFeeType === "flat" ? "flat" : "percent"); setMarketplaceFeeAmount(String(v.marketplaceFeeAmount || marketplaceFeeAmount)); if (v.marketplaceNote) setMarketplaceNote(String(v.marketplaceNote)); setExpressEnabled(v.expressEnabled !== false); setExpressAmount(String(v.expressAmount || expressAmount)); setExpressCutoff(String(v.expressCutoff || expressCutoff)); if (v.expressNote) setExpressNote(String(v.expressNote)); }).catch(() => undefined);
   }, []);
 
   const handleSaveCharges = async () => {
@@ -170,7 +171,7 @@ export default function ShippingPage() {
       toast.error("Order ID and Customer Name are required");
       return;
     }
-    const matching = await api<{ items: Array<Record<string, unknown>> }>("/admin/orders").then(({ items }) => items.find((order) => String(order.orderNumber || order.id) === newOrderId || String(order.id) === newOrderId));
+    const matching = allOrders.find((order) => String(order.orderNumber || order.id) === newOrderId || String(order.id) === newOrderId);
     if (!matching) { toast.error("Order was not found in MongoDB"); return; }
     try { const result = await api<{ order: Record<string, unknown>; label?: Record<string, unknown> }>(`/admin/orders/${matching.id}/shipment/label`, { method: "POST", body: JSON.stringify({ carrier: newCarrier, tracking: newTracking || undefined, manual: true }) }); const shipment = result.order.shipment as Record<string, unknown>; const newShp: Shipment = { id: String(result.order.id), orderId: String(result.order.orderNumber || newOrderId), customer: String((result.order.customer as Record<string, unknown>)?.fullName || newCustomer), carrier: String(shipment.carrier || newCarrier), tracking: String(shipment.tracking || result.label?.tracking || newTracking), status: "label_created", destination: newDestination || "India", eta: shipment.eta ? String(shipment.eta).slice(0, 10) : "" }; setShipmentsList((prev) => [newShp, ...prev]);
     setOpenNewDialog(false);
@@ -178,12 +179,16 @@ export default function ShippingPage() {
     setNewCustomer("");
     setNewTracking("");
     setNewDestination("");
+    setNewCarrier("Delhivery");
     toast.success("Carrier label generated!"); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create carrier label"); }
   };
 
   const handleUpdateStatus = async (id: string, newStatus: Shipment["status"]) => {
     const shipment = shipmentsList.find((item) => item.id === id); if (!shipment) return;
-    try { await api(`/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify({ shipment: { carrier: shipment.carrier, tracking: shipment.tracking, status: newStatus, eta: shipment.eta } }) });
+    const carrier = shipment.carrier || "Unknown";
+    const tracking = shipment.tracking && shipment.tracking.length >= 2 ? shipment.tracking : "N/A";
+    const etaPayload = shipment.eta && shipment.eta.length >= 4 ? { eta: shipment.eta } : {};
+    try { await api(`/admin/orders/${id}`, { method: "PATCH", body: JSON.stringify({ shipment: { carrier, tracking, status: newStatus, ...etaPayload } }) });
     setShipmentsList((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
     );
@@ -665,7 +670,7 @@ export default function ShippingPage() {
       </Dialog>
 
       {/* CREATE SHIPPING LABEL DIALOG — Enhanced UI */}
-      <Dialog open={openNewDialog} onOpenChange={setOpenNewDialog}>
+      <Dialog open={openNewDialog} onOpenChange={(open) => { if (!open) { setOpenNewDialog(false); setNewOrderId(""); setNewCustomer(""); setNewTracking(""); setNewDestination(""); setNewCarrier("Delhivery"); } else setOpenNewDialog(true); }}>
         <DialogContent className="max-w-lg p-0 overflow-hidden gap-0 rounded-2xl shadow-2xl">
 
           {/* ── Gradient Header ── */}
@@ -698,16 +703,31 @@ export default function ShippingPage() {
                   <Label htmlFor="ship-orderid" className="text-xs font-semibold">
                     Order ID <span className="text-red-500">*</span>
                   </Label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="ship-orderid"
-                      placeholder="e.g. #ORD-1093"
-                      value={newOrderId}
-                      onChange={(e) => setNewOrderId(e.target.value)}
-                      className="pl-9 text-sm h-9 bg-muted/40 border-border/70"
-                    />
-                  </div>
+                  <Select
+                    value={newOrderId}
+                    onValueChange={(val) => {
+                      setNewOrderId(val);
+                      const order = allOrders.find((o) => String(o.orderNumber || o.id) === val);
+                      if (order) {
+                        setNewCustomer(String((order.customer as Record<string, string>)?.fullName || ""));
+                        setNewDestination(String((order.shippingAddress as Record<string, string>)?.city || ""));
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="ship-orderid" className="h-9 text-sm bg-muted/40 border-border/70">
+                      <SelectValue placeholder="Select an order..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allOrders.map((o) => {
+                        const oid = String(o.orderNumber || o.id);
+                        return (
+                          <SelectItem key={String(o.id)} value={oid} className="text-xs font-mono">
+                            {oid} — {String((o.customer as Record<string, string>)?.fullName || "Customer")}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -718,7 +738,7 @@ export default function ShippingPage() {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                     <Input
                       id="ship-cust"
-                      placeholder="e.g. Aakash Sharma"
+                      placeholder="Auto-filled from order"
                       value={newCustomer}
                       onChange={(e) => setNewCustomer(e.target.value)}
                       className="pl-9 text-sm h-9 bg-muted/40 border-border/70"
@@ -790,7 +810,7 @@ export default function ShippingPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setOpenNewDialog(false)}
+              onClick={() => { setOpenNewDialog(false); setNewOrderId(""); setNewCustomer(""); setNewTracking(""); setNewDestination(""); setNewCarrier("Delhivery"); }}
               className="h-9 px-4 text-xs font-semibold"
             >
               Cancel

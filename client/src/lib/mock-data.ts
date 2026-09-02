@@ -243,6 +243,7 @@ export type OrderItem = {
 
 export type Order = {
   id: string;
+  orderNumber?: string;
   customer: string;
   email: string;
   total: number;
@@ -250,6 +251,9 @@ export type Order = {
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   paymentStatus: "paid" | "unpaid" | "refunded";
   paymentMethod?: string;
+  paymentProvider?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   shippingAddress?: string;
   date: string;
 };

@@ -3612,14 +3612,9 @@ export default function ProductsPage() {
                   )}
                 </div>
               </TabsContent>
-<<<<<<< HEAD
               )}
-            </Tabs>
-          </div>
-=======
             </div>
           </Tabs>
->>>>>>> 7576a462c275af5ff4df16cff144d4c615b3c455
 
           {/* Modal Footer */}
           <DialogFooter className="p-4 border-t bg-muted/20 flex items-center justify-between shrink-0">
